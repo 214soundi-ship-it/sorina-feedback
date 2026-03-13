@@ -1,6 +1,6 @@
 let pdfDoc = null;
 let pageNum = 1;
-let pagePendingRendering = false;
+let pageRendering = false;
 let pageNumPending = null;
 let currentScale = 1.0;
 let originalFileName = "소리나는피드백";
