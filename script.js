@@ -13,6 +13,7 @@ const drawCtx = drawingCanvas.getContext('2d', { willReadFrequently: true });
 const pdfContainer = document.getElementById('pdf-container');
 const emptyState = document.querySelector('.empty-state');
 const pageControls = document.getElementById('page-controls');
+const workspace = document.querySelector('.workspace');
 
 // Declare pauseBtn globally but assign it later to ensure DOM is ready
 let pauseBtn; 
