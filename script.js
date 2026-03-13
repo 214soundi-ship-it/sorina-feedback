@@ -305,6 +305,16 @@ function resetAppState(preserveMode = false) {
   feedbackData.pages = 1;
   recordedAudioBlob = null;
   learnerAudioUrl = null;
+  
+  // UX FIX: Robust mic cleanup
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    try { mediaRecorder.stop(); } catch(e) {}
+  }
+  isRecording = false;
+  isMicArmed = false;
+  startTime = null;
+  if (timerInterval) clearInterval(timerInterval);
+
   if (learnerAudio) learnerAudio.src = '';
   pageNum = 1;
   isLearnerContentLoaded = false;
@@ -627,7 +637,16 @@ function getAudioCurrentTime() {
 }
 
 function startDrawing(e) {
-  if (isInputBlocked) return; // Prevent strokes during transitions or UI usage
+  if (isInputBlocked) return; 
+  
+  // UX FIX: Differentiate between Pen and Touch for professional iPad experience
+  // If the user uses a pen, only allow drawing if the pointerType is 'pen'.
+  // We allow 'mouse' for desktop testing, but block 'touch' if it's not a pen.
+  if (currentMode === 'professor' && e.pointerType === 'touch') {
+    // Touch is for navigation/zooming, not for drawing in Professor mode
+    return;
+  }
+
   if (currentMode === 'learner') {
     handleLearnerClick(e);
     return;
@@ -878,39 +897,33 @@ const timerDisplay = document.getElementById('record-timer');
 
 async function setupAudio() {
   recordBtn.addEventListener('click', async () => {
-    if (isMicArmed) {
-      startActualRecording();
-      return;
-    }
+    if (isRecording) return; // Guard: already recording
 
-    if (!isMicArmed && !isRecording) {
-      // Stream check/get
-      if (!stream) {
-        try {
-          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          } else {
-            throw new Error('mediaDevices API cannot be used');
-          }
-        } catch (err) {
-          console.warn('Mic error or not available:', err);
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          if (AudioContext) {
-            const ctx = new AudioContext();
-            const dest = ctx.createMediaStreamDestination();
-            stream = dest.stream;
-          } else {
-            alert('오디오를 지원하지 않는 브라우저입니다.');
-            return;
-          }
+    // UX FIX: Instant recording! No more "Armed/Wait" state unless explicitly needed.
+    // If not recording, we initialize and start immediately.
+    
+    if (!stream) {
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } else {
+          throw new Error('mediaDevices API cannot be used');
+        }
+      } catch (err) {
+        console.warn('Mic error or not available:', err);
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+          const ctx = new AudioContext();
+          const dest = ctx.createMediaStreamDestination();
+          stream = dest.stream;
+        } else {
+          alert('오디오를 지원하지 않는 브라우저입니다.');
+          return;
         }
       }
-
-      isMicArmed = true;
-      recordBtn.classList.add('armed');
-      recordBtn.innerHTML = '<i class="fa-solid fa-microphone"></i><span style="font-size:10px;display:block;">대기중</span>';
-      recordBtn.style.color = '#ff9500'; // Show armed state
     }
+
+    startActualRecording();
   });
 
   stopBtn.addEventListener('click', () => {
@@ -1223,6 +1236,15 @@ exportPackageBtn.addEventListener('click', async () => {
       const shareUrl = `${window.location.origin}${window.location.pathname}?fid=${feedbackId}`;
       shareInput.value = shareUrl;
       shareContainer.classList.remove('hidden');
+      
+      // UX FIX: Auto-copy link to clipboard and show toast
+      try {
+        navigator.clipboard.writeText(shareUrl);
+        showToast("공유 링크가 자동으로 복사되었습니다!");
+      } catch (err) {
+        console.warn("Auto-copy failed", err);
+      }
+
       // Trigger slide-up animation
       requestAnimationFrame(() => {
         shareContainer.classList.add('show');
