@@ -175,6 +175,8 @@ function unlockAudio() {
       learnerAudio.pause();
       isAudioUnlocked = true;
       console.log("Audio Element Unlocked via existing source");
+      // UI Correction: Force play icon back if it was toggled by event
+      if (playPauseBtn) playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
     }).catch(e => {
       console.warn("Unlock via source failed, falling back to silent buffer", e);
       tryUnlockWithSilent();
@@ -194,6 +196,8 @@ function tryUnlockWithSilent() {
     learnerAudio.pause();
     isAudioUnlocked = true;
     console.log("Audio Unlocked with Silent Buffer");
+    // UI Correction: Force play icon back
+    if (playPauseBtn) playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
     
     if (originalSrc && originalSrc !== silentSrc) {
       learnerAudio.src = originalSrc;
@@ -314,6 +318,15 @@ function resetAppState(preserveMode = false) {
   isMicArmed = false;
   startTime = null;
   if (timerInterval) clearInterval(timerInterval);
+
+  // Re-enable record button if it was disabled
+  if (recordBtn) {
+    recordBtn.disabled = false;
+    recordBtn.classList.remove('recording', 'armed');
+    recordBtn.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+    recordBtn.style.color = '';
+  }
+  if (timerDisplay) timerDisplay.textContent = '00:00';
 
   if (learnerAudio) learnerAudio.src = '';
   pageNum = 1;
@@ -897,7 +910,10 @@ const timerDisplay = document.getElementById('record-timer');
 
 async function setupAudio() {
   recordBtn.addEventListener('click', async () => {
-    if (isRecording) return; // Guard: already recording
+    if (isRecording) {
+      console.log("Already recording, ignoring click");
+      return;
+    }
 
     // UX FIX: Instant recording! No more "Armed/Wait" state unless explicitly needed.
     // If not recording, we initialize and start immediately.
@@ -1037,7 +1053,7 @@ function startActualRecording() {
       recordBtn.classList.add('recording');
       recordBtn.innerHTML = '<i class="fa-solid fa-circle-dot"></i>';
       recordBtn.style.color = ''; 
-      recordBtn.disabled = true;
+      // recordBtn.disabled = true; // REMOVED: Don't disable it, just let the logic handle it
     }
     
     if (timerDisplay) timerDisplay.classList.add('recording');
@@ -1398,6 +1414,8 @@ function setupLearnerInputs() {
         learnerAudioUrl = audioUrl;
         learnerAudio.load(); // Explicit load for iOS metadata
         learnerPlayerTools.classList.remove('disabled');
+        // UI FIX: Ensure play icon is visible initially
+        if (playPauseBtn) playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
       }
 
       isLearnerContentLoaded = true;

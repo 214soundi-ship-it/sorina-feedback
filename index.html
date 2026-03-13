@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>소리나는 피드백 (살아있는 문서)</title>
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap"
@@ -131,23 +131,32 @@
 
             <div id="share-link-container" class="hidden share-link-card">
               <div class="card-header">
-                <img src="logo.png" alt="Logo" class="mini-logo">
-                <p class="card-title">피드백 링크 생성 완료</p>
+                <p class="card-title">🖋️ 피드백 링크 생성 완료</p>
               </div>
 
               <div class="link-input-group">
-                <input type="text" id="share-link-input" readonly value="https://sorina-feedback.com/f/XXXX">
+                <input type="text" id="share-link-input" readonly value="">
                 <button id="copy-link-btn" class="btn btn-primary copy-btn" title="링크 복사">
                   <i class="fa-regular fa-copy"></i> 복사
                 </button>
               </div>
 
+              <!-- Dashed Divider -->
+              <div style="border-top: 1px dashed #ddd; margin: 15px 0;"></div>
+
               <div class="card-footer">
-                <p class="tip-text" style="color: #4b49b8; background: #eeefff; padding: 10px; border-radius: 8px; margin-bottom: 8px;">
-                  ✨ <strong>중요:</strong> 이 링크는 현재 브라우저의 전용 공간에 저장됩니다. <strong>영구적인 보관이나 대량 배포</strong>를 위해서는 아래 '피드백 파일 다운로드' 버튼을 꼭 사용하세요!
+                <p class="tip-text">
+                  💡 <strong>하나. 바로 공유하세요!</strong><br>
+                  LMS(e-class), 카카오톡, 또는 이메일에 이 링크를 바로 붙여넣어 보세요. 학생은 별도의 앱 설치 없이 웹 브라우저에서 즉시 피드백을 확인할 수 있습니다.
                 </p>
-                <p class="tip-text">💡 <strong>Tip:</strong> LMS(e-class), 카카오톡, 또는 이메일에 이 링크를 바로 붙여넣어 보세요!</p>
-                <p class="security-text">🔒 <strong>보안:</strong> 링크를 가진 사람만 피드백을 확인할 수 있습니다.</p>
+                <p class="tip-text">
+                  🔒 <strong>둘. 안전하게 전달됩니다.</strong><br>
+                  이 링크는 고유한 ID를 포함하고 있어, 주소를 가진 사람만 피드백 내용을 확인할 수 있으니 안심하셔도 됩니다.
+                </p>
+                <p class="tip-text" style="color: #4b49b8; background: #eeefff; padding: 12px; border-radius: 8px;">
+                  ✨ <strong>셋. 꼭 기억해 주세요!</strong><br>
+                  현재 링크는 브라우저의 전용 공간에 저장되어 있습니다. <strong>교무처 제출이나 영구적인 보관</strong>을 위해서는 아래 <strong style="color: #3b3a9e;">'피드백 파일 다운로드'</strong> 버튼을 눌러 ZIP 파일을 꼭 개인 PC에 저장해 주세요.
+                </p>
               </div>
             </div>
           </div>

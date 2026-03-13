@@ -1214,7 +1214,7 @@ input:checked+.slider:before {
   height: 100%;
   cursor: crosshair;
   z-index: 5;
-  touch-action: none;
+  touch-action: auto; /* Changed from none to allow browser pinch-zoom/panning */
 }
 
 /* Page Controls */
