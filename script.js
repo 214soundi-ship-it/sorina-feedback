@@ -452,7 +452,15 @@ function renderPage(num) {
       setTimeout(() => {
         isInputBlocked = false;
       }, 500);
+    }).catch(err => {
+      console.error('Rendering error:', err);
+      pageRendering = false;
+      isInputBlocked = false;
     });
+  }).catch(err => {
+    console.error('Error getting page:', err);
+    pageRendering = false;
+    isInputBlocked = false;
   });
 
   document.getElementById('page-num').textContent = num;
@@ -723,11 +731,18 @@ function renderStrokes(highlightId = null) {
   const setStyle = (stroke, isFaint) => {
     drawCtx.lineCap = 'round';
     drawCtx.lineJoin = 'round';
+    
+    // Safety check for color
+    let hex = stroke.color || '#1c1c1e';
+    if (!hex.startsWith('#')) hex = '#1c1c1e';
+    
+    let r = parseInt(hex.slice(1, 3), 16) || 0; 
+    let g = parseInt(hex.slice(3, 5), 16) || 0; 
+    let b = parseInt(hex.slice(5, 7), 16) || 0;
+
     if (stroke.tool === 'highlighter') {
       drawCtx.globalCompositeOperation = 'source-over';
-      let hex = stroke.color || '#ff3b30';
-      let r = parseInt(hex.slice(1, 3), 16); let g = parseInt(hex.slice(3, 5), 16); let b = parseInt(hex.slice(5, 7), 16);
-      let alpha = isFaint ? 0.08 : 0.15; // Decreased highlighter opacity to prevent obscuring text
+      let alpha = isFaint ? 0.08 : 0.15;
       drawCtx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
       drawCtx.lineWidth = stroke.thickness * 3 + 10;
     } else if (stroke.tool === 'eraser') {
@@ -736,9 +751,7 @@ function renderStrokes(highlightId = null) {
       drawCtx.lineWidth = stroke.thickness * 5 + 10;
     } else {
       drawCtx.globalCompositeOperation = 'source-over';
-      let hex = stroke.color || '#1c1c1e';
-      let r = parseInt(hex.slice(1, 3), 16); let g = parseInt(hex.slice(3, 5), 16); let b = parseInt(hex.slice(5, 7), 16);
-      let alpha = isFaint ? 0.4 : 1.0; // Increased faint background visibility
+      let alpha = isFaint ? 0.4 : 1.0;
       drawCtx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
       drawCtx.lineWidth = stroke.thickness;
     }
