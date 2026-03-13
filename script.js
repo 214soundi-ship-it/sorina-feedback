@@ -116,6 +116,15 @@ function debounce(func, wait) {
   };
 }
 
+// Global Unlock: Any first touch/click on window will signal to iOS that audio is desired
+const globalUnlock = () => {
+  unlockAudio();
+  window.removeEventListener('click', globalUnlock);
+  window.removeEventListener('touchstart', globalUnlock);
+};
+window.addEventListener('click', globalUnlock, { once: true });
+window.addEventListener('touchstart', globalUnlock, { once: true });
+
 function setupWelcomeModal() {
   const modal = document.getElementById('welcome-modal');
   const closeBtn = document.getElementById('close-modal-btn');
@@ -157,15 +166,27 @@ function setupWelcomeModal() {
 function unlockAudio() {
   if (isAudioUnlocked || !learnerAudio) return;
   
-  // Create a silent buffer/play-pause cycle to tell the browser 
-  // that audio is now allowed within this user-initiated event.
+  // Use a tiny 0.1s silent base64 audio to "warm up" the audio context
+  // This is more reliable than playing an empty source on iOS
+  const silentSrc = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA== ";
+  
+  const originalSrc = learnerAudio.src;
+  const originalTime = learnerAudio.currentTime;
+
+  learnerAudio.src = silentSrc;
   learnerAudio.play().then(() => {
     learnerAudio.pause();
     isAudioUnlocked = true;
-    console.log("Audio Unlocked for iOS Safari");
+    console.log("Audio Unlocked with Silent Buffer");
+    
+    // Restore original state if it existed
+    if (originalSrc && originalSrc !== silentSrc) {
+      learnerAudio.src = originalSrc;
+      learnerAudio.currentTime = originalTime;
+      learnerAudio.load(); 
+    }
   }).catch(e => {
-    // If it fails (e.g. no source yet), it might still count as a signal for future play()
-    console.log("Audio unlock attempted", e);
+    console.warn("Audio unlock attempt failed", e);
   });
 }
 
@@ -1247,6 +1268,7 @@ async function loadMockDbRecord(feedbackId) {
       const audioUrl = URL.createObjectURL(record.audio);
       learnerAudio.src = audioUrl;
       learnerAudioUrl = audioUrl; // CRITICAL FIX: Ensure global learnerAudioUrl is set!
+      learnerAudio.load(); // Explicit load for iOS
       learnerPlayerTools.classList.remove('disabled');
     }
 
@@ -1479,12 +1501,22 @@ function setupCustomAudioPlayer() {
 }
 
 // Event Listeners for UI interaction
-playPauseBtn.addEventListener('click', () => {
+playPauseBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  unlockAudio(); // Ensure unlocked on btn click
+  
   if (learnerAudio.paused) {
-    learnerAudio.play().catch(e => {
-      console.error("Audio playback failed:", e);
-      alert("오디오를 재생할 수 없습니다.");
-    });
+    const playPromise = learnerAudio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(e => {
+        console.error("Audio playback failed:", e);
+        if (e.name === 'NotAllowedError') {
+          showToast("화면을 한 번 터치하신 후 재생 버튼을 다시 눌러주세요.");
+        } else {
+          showToast("오디오를 재생할 수 없습니다. (데이터 로딩 중일 수 있습니다)");
+        }
+      });
+    }
   } else {
     learnerAudio.pause();
   }
