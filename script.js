@@ -261,6 +261,7 @@ function setupResetAction() {
         const audioUrl = URL.createObjectURL(recordedAudioBlob);
         learnerAudio.src = audioUrl;
         learnerAudioUrl = audioUrl;
+        learnerAudio.load(); // Explicit load for iOS
         learnerPlayerTools.classList.remove('disabled');
       }
       
@@ -470,14 +471,14 @@ document.getElementById('prev-page').addEventListener('click', (e) => {
   e.stopPropagation(); // Prevent pen trigger
   if (pageNum <= 1) return;
   pageNum--;
-  queueRenderPage(pageNum);
+  renderPage(pageNum);
 });
 
 document.getElementById('next-page').addEventListener('click', (e) => {
   e.stopPropagation(); // Prevent pen trigger
   if (pageNum >= pdfDoc.numPages) return;
   pageNum++;
-  queueRenderPage(pageNum);
+  renderPage(pageNum);
 });
 
 function queueRenderPage(num) {
@@ -962,8 +963,20 @@ function startActualRecording() {
   if (!stream || isRecording) return; // Guard: don't start if stream missing or already recording
   
   try {
-    // Re-create MediaRecorder for every new recording session (fix for "cannot reuse after stop")
-    mediaRecorder = new MediaRecorder(stream);
+    // Re-create MediaRecorder with best supported MIME type
+    const supportedTypes = ['audio/mp4', 'audio/webm', 'audio/ogg', 'audio/wav'];
+    let selectedType = '';
+    for (const type of supportedTypes) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        selectedType = type;
+        break;
+      }
+    }
+    
+    const options = selectedType ? { mimeType: selectedType } : {};
+    console.log("Using recording MIME type:", selectedType || "default");
+    
+    mediaRecorder = new MediaRecorder(stream, options);
     audioChunks = [];
     
     mediaRecorder.ondataavailable = (e) => {
@@ -971,7 +984,8 @@ function startActualRecording() {
     };
 
     mediaRecorder.onstop = () => {
-      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      const mimeType = mediaRecorder.mimeType || 'audio/webm';
+      const audioBlob = new Blob(audioChunks, { type: mimeType });
       recordedAudioBlob = audioBlob; 
       const audioUrl = URL.createObjectURL(audioBlob);
       learnerAudioUrl = audioUrl; 
@@ -1311,40 +1325,41 @@ function setupLearnerInputs() {
     try {
       const zip = await JSZip.loadAsync(file);
 
-      // 1. Load PDF
-      let pdfFileToLoad = zip.file("original.pdf");
-      if (!pdfFileToLoad) {
-        const pdfFiles = zip.file(/.*\.pdf$/i);
-        pdfFileToLoad = pdfFiles.length > 0 ? pdfFiles[0] : null;
-      }
+      // 1. Find and Load PDF
+      let pdfFileToLoad = zip.file("original.pdf") || zip.file(/.*\.pdf$/i)[0];
       if (pdfFileToLoad) {
         const fileData = await pdfFileToLoad.async("uint8array");
         const cleanData = new Uint8Array(fileData);
         pageNum = 1;
         loadPdf(cleanData);
       } else {
-        alert("PDF 파일을 찾을 수 없습니다.");
+        alert("ZIP 파일 내에서 PDF 파일을 찾을 수 없습니다.");
         return;
       }
 
-      // 2. Load JSON
-      const jsonFiles = zip.file(/.*\.json$/i);
-      if (jsonFiles.length > 0) {
-        const jsonStr = await jsonFiles[0].async("string");
+      // 2. Find and Load JSON
+      let jsonFileToLoad = zip.file("feedback.json") || zip.file(/.*\.json$/i)[0];
+      if (jsonFileToLoad) {
+        const jsonStr = await jsonFileToLoad.async("string");
         feedbackData = JSON.parse(jsonStr);
       } else {
-        alert("데이터 파일을 찾을 수 없습니다.");
+        alert("ZIP 파일 내에서 데이터 파일(.json)을 찾을 수 없습니다.");
         return;
       }
 
-      // 3. Load Audio
-      const audioFiles = zip.file(/.*\.webm$/i);
-      if (audioFiles.length > 0) {
-        const audioData = await audioFiles[0].async("blob");
-        const audioBlob = new Blob([audioData], { type: 'audio/webm' });
+      // 3. Find and Load Audio
+      let audioFileToLoad = zip.file("audio.webm") || zip.file("audio.mp4") || zip.file(/.*\.(webm|mp4|m4a|wav|mp3)$/i)[0];
+      if (audioFileToLoad) {
+        const audioData = await audioFileToLoad.async("blob");
+        // Use the actual file's extension to determine mime type, or fallback
+        const ext = audioFileToLoad.name.split('.').pop().toLowerCase();
+        const mimeMap = { 'webm': 'audio/webm', 'mp4': 'audio/mp4', 'm4a': 'audio/mp4', 'wav': 'audio/wav', 'mp3': 'audio/mpeg' };
+        const audioBlob = new Blob([audioData], { type: mimeMap[ext] || 'audio/mp4' });
+        
         const audioUrl = URL.createObjectURL(audioBlob);
         learnerAudio.src = audioUrl;
-        learnerAudioUrl = audioUrl; // CRITICAL FIX: Ensure playback state is global!
+        learnerAudioUrl = audioUrl;
+        learnerAudio.load(); // Explicit load for iOS metadata
         learnerPlayerTools.classList.remove('disabled');
       }
 
@@ -1639,13 +1654,21 @@ downloadZipBtn.addEventListener('click', async () => {
 
     // 3. Add Audio if it exists
     if (typeof recordedAudioBlob !== 'undefined' && recordedAudioBlob) {
-      zip.file("audio.webm", recordedAudioBlob);
+      // Robust extension detection
+      let extension = 'webm';
+      if (recordedAudioBlob.type.includes('mp4')) extension = 'mp4';
+      else if (recordedAudioBlob.type.includes('aac')) extension = 'm4a';
+      else if (recordedAudioBlob.type.includes('mpeg')) extension = 'mp3';
+      
+      zip.file(`audio.${extension}`, recordedAudioBlob);
     } else if (learnerAudioUrl) {
-      // Fetch if we are in a state where we just have a URL (eg. loaded via zip in learner mode, though button is usually hidden)
       try {
         const response = await fetch(learnerAudioUrl);
         const audioBlobLocal = await response.blob();
-        zip.file("audio.webm", audioBlobLocal);
+        let extension = audioBlobLocal.type.includes('mp4') ? 'mp4' : 'webm';
+        if (audioBlobLocal.type.includes('aac')) extension = 'm4a';
+        
+        zip.file(`audio.${extension}`, audioBlobLocal);
       } catch (e) {
         console.error("Audio fetch failed for ZIP", e);
       }
