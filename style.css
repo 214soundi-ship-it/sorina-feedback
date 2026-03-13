@@ -1256,13 +1256,14 @@ input:checked+.slider:before {
 
 .modal-content {
   background: var(--surface);
-  width: 90%;
+  width: 95%;
   max-width: 550px;
+  max-height: 90vh; /* Prevent modal from exceeding screen height */
+  overflow-y: auto; /* Enable scrolling if content is long */
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   transform: translateY(20px);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
 }
 
 .modal-overlay.show .modal-content {
@@ -1353,10 +1354,13 @@ input:checked+.slider:before {
 }
 
 /* Mobile Responsiveness */
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .sidebar {
-    width: 240px;
+    width: 260px;
     left: 1rem;
+  }
+  .workspace {
+    padding: 0 1rem 3rem calc(260px + 2rem);
   }
   .app-header {
     padding: 1rem 2rem;

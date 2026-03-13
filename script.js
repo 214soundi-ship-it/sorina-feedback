@@ -1,8 +1,8 @@
 let pdfDoc = null;
 let pageNum = 1;
-let pageRendering = false;
+let pagePendingRendering = false;
 let pageNumPending = null;
-const scale = 1.5;
+let currentScale = 1.0;
 let originalFileName = "소리나는피드백";
 
 // Elements
@@ -80,6 +80,7 @@ let lastY = 0;
 let isRecording = false;
 let startTime = null;
 let timerInterval = null;
+let isInputBlocked = false; // Flag to prevent accidental strokes during page transitions
 
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
@@ -96,7 +97,24 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof lucide !== 'undefined') {
     lucide.createIcons();
   }
+
+  // Handle Resize
+  window.addEventListener('resize', debounce(() => {
+    if (pdfDoc) renderPage(pageNum);
+  }, 300));
 });
+
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
 
 function setupWelcomeModal() {
   const modal = document.getElementById('welcome-modal');
@@ -368,9 +386,21 @@ function loadPdf(data) {
 }
 
 function renderPage(num) {
+  if (pageRendering) {
+    pageNumPending = num;
+    return;
+  }
   pageRendering = true;
+  isInputBlocked = true; // Block input during page render
+
   pdfDoc.getPage(num).then(page => {
-    const viewport = page.getViewport({ scale: scale });
+    // Dynamic Scaling logic
+    const viewport_orig = page.getViewport({ scale: 1.0 });
+    const containerWidth = workspace.clientWidth - 80; // 40px margin on each side
+    const scaleToFit = containerWidth / viewport_orig.width;
+    currentScale = Math.min(scaleToFit, 1.8); // Max scale 1.8 for quality
+
+    const viewport = page.getViewport({ scale: currentScale });
 
     pdfRenderCanvas.height = viewport.height;
     pdfRenderCanvas.width = viewport.width;
@@ -395,19 +425,26 @@ function renderPage(num) {
       }
       // Re-render strokes if any exist for this page
       renderStrokes();
+
+      // Unblock input after a short delay to prevent accidental pens
+      setTimeout(() => {
+        isInputBlocked = false;
+      }, 500);
     });
   });
 
   document.getElementById('page-num').textContent = num;
 }
 
-document.getElementById('prev-page').addEventListener('click', () => {
+document.getElementById('prev-page').addEventListener('click', (e) => {
+  e.stopPropagation(); // Prevent pen trigger
   if (pageNum <= 1) return;
   pageNum--;
   queueRenderPage(pageNum);
 });
 
-document.getElementById('next-page').addEventListener('click', () => {
+document.getElementById('next-page').addEventListener('click', (e) => {
+  e.stopPropagation(); // Prevent pen trigger
   if (pageNum >= pdfDoc.numPages) return;
   pageNum++;
   queueRenderPage(pageNum);
@@ -544,6 +581,7 @@ function getAudioCurrentTime() {
 }
 
 function startDrawing(e) {
+  if (isInputBlocked) return; // Prevent strokes during transitions or UI usage
   if (currentMode === 'learner') {
     handleLearnerClick(e);
     return;
