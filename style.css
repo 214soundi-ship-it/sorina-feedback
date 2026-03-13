@@ -1214,7 +1214,17 @@ input:checked+.slider:before {
   height: 100%;
   cursor: crosshair;
   z-index: 5;
-  touch-action: auto; /* Changed from none to allow browser pinch-zoom/panning */
+  touch-action: auto; 
+  transition: transform 0.1s ease-out; /* Smooth zoom transition */
+  transform-origin: top center; /* Scale from top center for better consistency with alignment */
+}
+
+/* Ensure pdf-container itself is the one being scaled */
+#pdf-container {
+  position: relative;
+  transition: transform 0.1s ease-out;
+  transform-origin: top center;
+  margin: 0 auto; /* Keep it centered as it grows */
 }
 
 /* Page Controls */

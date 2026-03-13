@@ -56,6 +56,18 @@
           <button id="new-feedback-btn" class="btn btn-secondary btn-full" style="margin-top: 1rem; font-size: 0.8rem; border-style: dashed;" title="모든 내용을 비우고 새로 시작합니다">
             <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i> 데이터 초기화 (새 피드백)
           </button>
+          
+          <div class="tool-group zoom-control" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-main);">화면 확대/축소</span>
+              <span id="zoom-value" style="font-size: 0.75rem; color: var(--primary); font-weight: 800;">100%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button id="zoom-out-btn" class="btn btn-icon-sm" style="padding: 4px 8px; font-size: 0.7rem;"><i class="fa-solid fa-minus"></i></button>
+              <input type="range" id="zoom-slider" min="50" max="300" value="100" style="flex: 1;">
+              <button id="zoom-in-btn" class="btn btn-icon-sm" style="padding: 4px 8px; font-size: 0.7rem;"><i class="fa-solid fa-plus"></i></button>
+            </div>
+          </div>
         </div>
 
         <div class="tool-section record-section disabled" id="prof-record-tools">
@@ -185,6 +197,18 @@
           <button id="learner-reset-btn" class="btn btn-secondary btn-full" style="margin-top: 1rem; font-size: 0.8rem; border-style: dashed;" title="화면을 초기화하고 새로운 피드백을 불러옵니다">
             <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i> 새로운 피드백 열기
           </button>
+
+          <div class="tool-group zoom-control" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-main);">화면 확대/축소</span>
+              <span id="learner-zoom-value" style="font-size: 0.75rem; color: var(--primary); font-weight: 800;">100%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button id="learner-zoom-out-btn" class="btn btn-icon-sm" style="padding: 4px 8px; font-size: 0.7rem;"><i class="fa-solid fa-minus"></i></button>
+              <input type="range" id="learner-zoom-slider" min="50" max="300" value="100" style="flex: 1;">
+              <button id="learner-zoom-in-btn" class="btn btn-icon-sm" style="padding: 4px 8px; font-size: 0.7rem;"><i class="fa-solid fa-plus"></i></button>
+            </div>
+          </div>
         </div>
 
         <div class="tool-section record-section disabled" id="learner-player-tools">
@@ -224,8 +248,9 @@
         </div>
       </aside>
 
-      <section class="workspace">
-        <div id="pdf-container" class="pdf-wrapper empty">
+      <section class="workspace" id="workspace">
+        <div id="zoom-wrapper" style="position: relative; transition: all 0.1s ease-out; width: auto; height: auto;">
+          <div id="pdf-container" class="pdf-wrapper empty">
           <!-- Floating Finish Button -->
           <button id="floating-finish-btn" class="hidden">
             <i class="fa-solid fa-square"></i> 피드백 마치기

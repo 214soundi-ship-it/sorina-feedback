@@ -11,6 +11,7 @@ const pdfCtx = pdfRenderCanvas.getContext('2d');
 const drawingCanvas = document.getElementById('drawing-canvas');
 const drawCtx = drawingCanvas.getContext('2d', { willReadFrequently: true });
 const pdfContainer = document.getElementById('pdf-container');
+const zoomWrapper = document.getElementById('zoom-wrapper');
 const emptyState = document.querySelector('.empty-state');
 const pageControls = document.getElementById('page-controls');
 const workspace = document.querySelector('.workspace');
@@ -76,6 +77,7 @@ let currentStyle = {
 };
 let lastX = 0;
 let lastY = 0;
+let currentZoom = 1.0; // Document specific zoom level
 
 // Missing State Variables (CRITICAL FIX)
 let isRecording = false;
@@ -93,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupWelcomeModal();
   setupResetAction();
   setupLearnerResetAction(); // Add learner reset listener
+  setupZoomControls(); // Initialize zoom listeners
   
   // Initialize Lucide Icons
   if (typeof lucide !== 'undefined') {
@@ -301,6 +304,60 @@ function setupLearnerResetAction() {
   }
 }
 
+function setupZoomControls() {
+  const zoomSlider = document.getElementById('zoom-slider');
+  const zoomValueText = document.getElementById('zoom-value');
+  const zoomInBtn = document.getElementById('zoom-in-btn');
+  const zoomOutBtn = document.getElementById('zoom-out-btn');
+
+  const learnerZoomSlider = document.getElementById('learner-zoom-slider');
+  const learnerZoomValueText = document.getElementById('learner-zoom-value');
+  const learnerZoomInBtn = document.getElementById('learner-zoom-in-btn');
+  const learnerZoomOutBtn = document.getElementById('learner-zoom-out-btn');
+
+  function applyZoom(zoom, source) {
+    currentZoom = Math.min(Math.max(zoom, 0.5), 3.0); // Clamp 50% to 300%
+    const percent = Math.round(currentZoom * 100);
+
+    // Update UI elements
+    [zoomSlider, learnerZoomSlider].forEach(s => { if (s) s.value = percent; });
+    [zoomValueText, learnerZoomValueText].forEach(t => { if (t) t.textContent = `${percent}%`; });
+
+    // Apply Transformation
+    if (pdfContainer && zoomWrapper) {
+      pdfContainer.style.transform = `scale(${currentZoom})`;
+      
+      const rect = pdfContainer.getBoundingClientRect();
+      const baseW = parseFloat(pdfContainer.style.width);
+      const baseH = parseFloat(pdfContainer.style.height);
+      
+      if (!isNaN(baseW) && !isNaN(baseH)) {
+        zoomWrapper.style.width = (baseW * currentZoom) + 'px';
+        zoomWrapper.style.height = (baseH * currentZoom) + 'px';
+      }
+    }
+  }
+
+  // Professor Listeners
+  if (zoomSlider) zoomSlider.addEventListener('input', (e) => applyZoom(e.target.value / 100, 'slider'));
+  if (zoomInBtn) zoomInBtn.addEventListener('click', () => applyZoom(currentZoom + 0.1));
+  if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => applyZoom(currentZoom - 0.1));
+
+  // Learner Listeners
+  if (learnerZoomSlider) learnerZoomSlider.addEventListener('input', (e) => applyZoom(e.target.value / 100, 'slider'));
+  if (learnerZoomInBtn) learnerZoomInBtn.addEventListener('click', () => applyZoom(currentZoom + 0.1));
+  if (learnerZoomOutBtn) learnerZoomOutBtn.addEventListener('click', () => applyZoom(currentZoom - 0.1));
+  
+  // Add Mouse Wheel Zoom (Ctrl + Wheel)
+  pdfContainer.addEventListener('wheel', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      applyZoom(currentZoom + delta);
+    }
+  }, { passive: false });
+}
+
 function resetAppState(preserveMode = false) {
   // 1. Clear Data
   pdfDoc = null;
@@ -470,6 +527,18 @@ function renderPage(num) {
     // Center container based on PDF width
     pdfContainer.style.width = `${viewport.width}px`;
     pdfContainer.style.height = `${viewport.height}px`;
+
+    // Apply current zoom to ensure layout stability if we were already zoomed
+    if (typeof applyZoom === 'function') {
+       // We can't call internal applyZoom easily here without exposing it, 
+       // so we just repeat the logic or trigger it.
+       // For now, let's just make sure zoomWrapper matches.
+       if (zoomWrapper) {
+         zoomWrapper.style.width = (viewport.width * currentZoom) + 'px';
+         zoomWrapper.style.height = (viewport.height * currentZoom) + 'px';
+         pdfContainer.style.transform = `scale(${currentZoom})`;
+       }
+    }
 
     const renderContext = {
       canvasContext: pdfCtx,
@@ -653,11 +722,12 @@ function startDrawing(e) {
   if (isInputBlocked) return; 
   
   // UX FIX: Differentiate between Pen and Touch for professional iPad experience
-  // If the user uses a pen, only allow drawing if the pointerType is 'pen'.
-  // We allow 'mouse' for desktop testing, but block 'touch' if it's not a pen.
-  if (currentMode === 'professor' && e.pointerType === 'touch') {
+  // For Pen/Mouse: Stop browser from scrolling/panning immediately
+  if (e.pointerType !== 'touch') {
+    if (e.cancelable) e.preventDefault();
+  } else {
     // Touch is for navigation/zooming, not for drawing in Professor mode
-    return;
+    if (currentMode === 'professor') return;
   }
 
   if (currentMode === 'learner') {
