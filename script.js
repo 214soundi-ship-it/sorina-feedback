@@ -1701,19 +1701,32 @@ downloadZipBtn.addEventListener('click', async () => {
     // Generate ZIP
     const zipBlob = await zip.generateAsync({ type: "blob" });
 
-    // Download
+    // Download with iOS-friendly logic
     const url = URL.createObjectURL(zipBlob);
     const a = document.createElement('a');
+    a.style.display = 'none';
     a.href = url;
-    a.download = `${originalFileName}_피드백.zip`;
+    // Clean filename for safety
+    const safeName = originalFileName.replace(/[/\\?%*:|"<>]/g, '_');
+    a.download = `${safeName}_피드백.zip`;
+    
     document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    
+    // On iOS, a short delay or keeping the element can help
+    setTimeout(() => {
+      a.click();
+      showToast("다운로드를 시작합니다...");
+      
+      // Revoke and cleanup after a longer delay to ensure Safari finishes
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 60000); // 1 minute delay for cleanup
+    }, 100);
 
   } catch (error) {
     console.error('ZIP 생성 중 오류 발생:', error);
-    alert('ZIP 생성 중 오류가 발생했습니다.');
+    showToast("저장 중 오류가 발생했습니다. (파일이 너무 클 수 있습니다)");
   } finally {
     downloadZipBtn.innerHTML = originalText;
     downloadZipBtn.disabled = false;
