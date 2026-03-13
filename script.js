@@ -78,6 +78,8 @@ let currentStyle = {
 let lastX = 0;
 let lastY = 0;
 let currentZoom = 1.0; // Document specific zoom level
+let tpInitialDist = 0; // Tracking for pinch zoom
+let tpInitialZoom = 1.0;
 
 // Missing State Variables (CRITICAL FIX)
 let isRecording = false;
@@ -310,24 +312,18 @@ function setupZoomControls() {
   const zoomInBtn = document.getElementById('zoom-in-btn');
   const zoomOutBtn = document.getElementById('zoom-out-btn');
 
-  const learnerZoomSlider = document.getElementById('learner-zoom-slider');
-  const learnerZoomValueText = document.getElementById('learner-zoom-value');
-  const learnerZoomInBtn = document.getElementById('learner-zoom-in-btn');
-  const learnerZoomOutBtn = document.getElementById('learner-zoom-out-btn');
-
-  function applyZoom(zoom, source) {
-    currentZoom = Math.min(Math.max(zoom, 0.5), 3.0); // Clamp 50% to 300%
+  function applyZoom(zoom) {
+    currentZoom = Math.min(Math.max(zoom, 0.5), 3.5); // Clamp 50% to 350%
     const percent = Math.round(currentZoom * 100);
 
-    // Update UI elements
-    [zoomSlider, learnerZoomSlider].forEach(s => { if (s) s.value = percent; });
-    [zoomValueText, learnerZoomValueText].forEach(t => { if (t) t.textContent = `${percent}%`; });
+    // Update UI
+    if (zoomSlider) zoomSlider.value = percent;
+    if (zoomValueText) zoomValueText.textContent = `${percent}%`;
 
     // Apply Transformation
     if (pdfContainer && zoomWrapper) {
       pdfContainer.style.transform = `scale(${currentZoom})`;
       
-      const rect = pdfContainer.getBoundingClientRect();
       const baseW = parseFloat(pdfContainer.style.width);
       const baseH = parseFloat(pdfContainer.style.height);
       
@@ -338,15 +334,10 @@ function setupZoomControls() {
     }
   }
 
-  // Professor Listeners
-  if (zoomSlider) zoomSlider.addEventListener('input', (e) => applyZoom(e.target.value / 100, 'slider'));
+  // Floating Controls Listeners
+  if (zoomSlider) zoomSlider.addEventListener('input', (e) => applyZoom(e.target.value / 100));
   if (zoomInBtn) zoomInBtn.addEventListener('click', () => applyZoom(currentZoom + 0.1));
   if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => applyZoom(currentZoom - 0.1));
-
-  // Learner Listeners
-  if (learnerZoomSlider) learnerZoomSlider.addEventListener('input', (e) => applyZoom(e.target.value / 100, 'slider'));
-  if (learnerZoomInBtn) learnerZoomInBtn.addEventListener('click', () => applyZoom(currentZoom + 0.1));
-  if (learnerZoomOutBtn) learnerZoomOutBtn.addEventListener('click', () => applyZoom(currentZoom - 0.1));
   
   // Add Mouse Wheel Zoom (Ctrl + Wheel)
   pdfContainer.addEventListener('wheel', (e) => {
@@ -354,6 +345,32 @@ function setupZoomControls() {
       e.preventDefault();
       const delta = e.deltaY > 0 ? -0.1 : 0.1;
       applyZoom(currentZoom + delta);
+    }
+  }, { passive: false });
+
+  // Add Pinch to Zoom support for iPad
+  pdfContainer.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault(); // Prevent native browser zoom
+      tpInitialDist = Math.hypot(
+        e.touches[0].pageX - e.touches[1].pageX,
+        e.touches[0].pageY - e.touches[1].pageY
+      );
+      tpInitialZoom = currentZoom;
+    }
+  }, { passive: false });
+
+  pdfContainer.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dist = Math.hypot(
+        e.touches[0].pageX - e.touches[1].pageX,
+        e.touches[0].pageY - e.touches[1].pageY
+      );
+      if (tpInitialDist > 0) {
+        const ratio = dist / tpInitialDist;
+        applyZoom(tpInitialZoom * ratio);
+      }
     }
   }, { passive: false });
 }
@@ -724,7 +741,8 @@ function startDrawing(e) {
   // UX FIX: Differentiate between Pen and Touch for professional iPad experience
   // For Pen/Mouse: Stop browser from scrolling/panning immediately
   if (e.pointerType !== 'touch') {
-    if (e.cancelable) e.preventDefault();
+    e.preventDefault(); 
+    e.stopPropagation();
   } else {
     // Touch is for navigation/zooming, not for drawing in Professor mode
     if (currentMode === 'professor') return;
