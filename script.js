@@ -167,10 +167,25 @@ function setupWelcomeModal() {
 function unlockAudio() {
   if (isAudioUnlocked || !learnerAudio) return;
   
-  // Use a tiny 0.1s silent base64 audio to "warm up" the audio context
-  // This is more reliable than playing an empty source on iOS
+  // If we already have a real source (not silent data URI), 
+  // we SHOULD NOT swap the src because it causes race conditions.
+  // Instead, just attempting to play the existing source is enough to unlock.
+  if (learnerAudio.src && (learnerAudio.src.startsWith('blob:') || learnerAudio.src.startsWith('http'))) {
+    learnerAudio.play().then(() => {
+      learnerAudio.pause();
+      isAudioUnlocked = true;
+      console.log("Audio Element Unlocked via existing source");
+    }).catch(e => {
+      console.warn("Unlock via source failed, falling back to silent buffer", e);
+      tryUnlockWithSilent();
+    });
+  } else {
+    tryUnlockWithSilent();
+  }
+}
+
+function tryUnlockWithSilent() {
   const silentSrc = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA== ";
-  
   const originalSrc = learnerAudio.src;
   const originalTime = learnerAudio.currentTime;
 
@@ -180,14 +195,13 @@ function unlockAudio() {
     isAudioUnlocked = true;
     console.log("Audio Unlocked with Silent Buffer");
     
-    // Restore original state if it existed
     if (originalSrc && originalSrc !== silentSrc) {
       learnerAudio.src = originalSrc;
       learnerAudio.currentTime = originalTime;
       learnerAudio.load(); 
     }
   }).catch(e => {
-    console.warn("Audio unlock attempt failed", e);
+    console.warn("Silent audio unlock failed", e);
   });
 }
 
@@ -535,7 +549,8 @@ function setupDrawingTools() {
   // Pointer Events for Cross-platform support (Mouse, Touch, Pen)
   // UX FIX: For iOS Safari, we use pointerdown but ensure it's treated as a valid gesture
   drawingCanvas.addEventListener('pointerdown', (e) => {
-    unlockAudio(); // Ensure unlocked on interaction
+    // Optimization: Don't call unlock here if already unlocked
+    if (!isAudioUnlocked) unlockAudio();
     startDrawing(e);
   });
   drawingCanvas.addEventListener('pointermove', draw);
@@ -1463,7 +1478,16 @@ function handleLearnerClick(e) {
   if (minDistance <= HIT_RADIUS && closestStroke) {
     // We found a stroke!
     console.log("Hit Stroke IDs:", closestStroke.id, "Time:", closestStroke.startTime);
-    playStrokeAudio(closestStroke);
+    
+    // Safety: ensure unlocked before playing the stroke audio
+    if (!isAudioUnlocked) {
+      unlockAudio();
+      // If we just had to unlock, wait a tiny bit for the engine to breathe 
+      // though Safari is usually okay if both are in the same stack
+      setTimeout(() => playStrokeAudio(closestStroke), 50);
+    } else {
+      playStrokeAudio(closestStroke);
+    }
   } else {
     // Clicked elsewhere
     renderStrokes(); // Clear highlights
