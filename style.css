@@ -25,6 +25,8 @@
   /* Soft primary tint */
   --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   --glass: blur(25px) saturate(180%);
+  /* Shared alignment line for all main content - ensuring sidebar and workarea start EXACTLY together */
+  --layout-top: 10rem; /* Significantly increased to accommodate the prominent header */
 }
 
 * {
@@ -81,8 +83,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 3.5rem;
-  /* Reduced vertical padding */
+  padding: 2.2rem 3.5rem;
+  /* Massive padding for absolute header prominence */
   background: var(--surface);
   backdrop-filter: var(--glass);
   -webkit-backdrop-filter: var(--glass);
@@ -106,14 +108,14 @@ body {
 }
 
 .logo .custom-logo {
-  height: 2.8rem;
-  /* Slightly smaller to match slimmer header */
+  height: 3.5rem;
+  /* Upscaled logo for presence */
   object-fit: contain;
 }
 
 .logo h1 {
-  font-size: 1.8rem;
-  /* Massive title */
+  font-size: 2.2rem;
+  /* Even more massive title for impact */
   font-weight: 800;
   color: var(--text-main);
   display: flex;
@@ -344,7 +346,7 @@ body {
 .divider {
   height: 1px;
   background-color: var(--border);
-  margin: 1.5rem 0;
+  margin: 1rem 0;
 }
 
 /* Glow Effect */
@@ -482,19 +484,16 @@ body {
   flex: 1;
   overflow: hidden;
   position: relative;
-  /* Push main content down to match sidebar exact top */
-  padding-top: 9rem;
+  /* Sync children heights */
+  align-items: stretch;
+  padding: var(--layout-top) 2rem 2rem 2rem;
+  gap: 2rem;
 }
 
 .sidebar {
-  position: absolute;
-  top: 9rem;
-  /* Aligned slightly higher to match slimmer header */
-  left: 1.5rem;
-  /* Inset slightly */
-  bottom: 1.5rem;
-  /* Inset slightly */
-  width: 280px;
+  position: relative; /* Remove absolute to participate in flex stretch */
+  width: 340px;
+  flex-shrink: 0;
   /* Thinner sidebar */
   background: var(--surface);
   backdrop-filter: blur(20px);
@@ -504,7 +503,7 @@ body {
   display: flex;
   flex-direction: column;
   padding: 1rem;
-  gap: 0.75rem;
+  gap: 0.5rem;
   overflow-y: auto;
   box-shadow: var(--shadow);
   z-index: 50;
@@ -519,14 +518,18 @@ body {
 
 .tool-section {
   padding: 1rem;
-  margin-bottom: 0.5rem;
-  border-radius: var(--radius-sm);
+  margin-bottom: 0.8rem;
+  border-radius: var(--radius); /* More consistent with design system */
   border: 1px solid transparent;
   transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Ensure left alignment */
+  text-align: left;
 }
 
 .tool-section:hover:not(.disabled) {
-  background: var(--surface-hover);
+  background: var(--surface);
   border-color: var(--border);
   box-shadow: var(--shadow-sm);
 }
@@ -536,28 +539,14 @@ body {
 }
 
 .tool-section.disabled {
-  opacity: 0.3;
+  opacity: 0.2; /* Subtly faded for minimal noise */
   pointer-events: none;
   filter: grayscale(100%);
   position: relative;
+  transition: opacity 0.3s ease;
 }
 
-.tool-section.disabled::after {
-  content: '파일 업로드 후 사용 가능';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 10;
-}
+/* Removed the messy overlay capsule ::after block to reduce visual noise */
 
 .tool-section h3 {
   font-size: 1rem;
@@ -584,7 +573,7 @@ body {
 .tool-group {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .colors {
@@ -601,52 +590,124 @@ body {
   border: 1px solid var(--border);
 }
 
-.tool-btn {
-  flex: 1;
-  padding: 0.6rem;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
+/* Floating Drawing Toolbar */
+.drawing-toolbar {
+  position: sticky;
+  top: 1rem;
+  z-index: 1000;
   display: flex;
-  justify-content: center;
   align-items: center;
+  gap: 1.25rem;
+  background: rgba(255, 255, 255, 0.85); /* Clean white glass */
+  backdrop-filter: blur(25px) saturate(160%);
+  -webkit-backdrop-filter: blur(25px) saturate(160%);
+  padding: 0.6rem 1.25rem;
+  border-radius: 60px;
+  border: 1px solid rgba(0, 0, 0, 0.08); /* Minimal border */
+  box-shadow: 
+    0 12px 30px rgba(0, 0, 0, 0.08), 
+    0 4px 10px rgba(0, 0, 0, 0.04);
+  margin: 0 auto 1.5rem auto;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(0);
+}
+
+.drawing-toolbar.disabled {
+  opacity: 0.8; /* Much clearer visibility even when disabled */
+  pointer-events: none;
+  transform: translateY(0);
+  filter: grayscale(0.6) brightness(0.95);
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.1);
+  margin: 0 0.25rem;
+}
+
+.drawing-toolbar .tool-btn {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 50%;
   font-size: 1.1rem;
 }
 
-.tool-btn.active {
-  background: var(--surface);
-  color: var(--primary);
-  box-shadow: var(--shadow-sm);
+.drawing-toolbar .tool-btn.active {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 4px 10px rgba(94, 92, 230, 0.3);
 }
 
-.tool-btn:hover:not(.active) {
+.drawing-toolbar .tool-btn:hover:not(.active) {
+  background: rgba(0, 0, 0, 0.05);
   color: var(--text-main);
-  background: var(--surface-hover);
 }
 
-.color-btn {
-  width: 26px;
-  /* Smaller, elegant circles */
-  height: 26px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.color-btn.active {
+.drawing-toolbar .color-btn.active {
   transform: scale(1.2);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), 0 0 0 2px var(--surface), 0 0 0 4px var(--primary);
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px var(--primary), 0 4px 10px rgba(0,0,0,0.2);
 }
 
-.size-slider {
-  flex-direction: column;
+.drawing-toolbar .color-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid white; /* More elegant circle */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.custom-color-mini {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+}
+
+.custom-color-mini input[type="color"] {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.3; /* Subtle overlay */
+}
+
+.custom-color-mini i {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.toolbar-group.sizes {
   gap: 0.8rem;
-  padding-top: 0.5rem;
+  color: var(--text-muted);
+  padding: 0 0.5rem;
+}
+
+.toolbar-group.sizes input[type="range"] {
+  width: 80px;
+  height: 4px;
 }
 
 .size-slider label {
@@ -726,15 +787,19 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 1.25rem;
   margin-top: 0.5rem;
+  background: rgba(0, 0, 0, 0.03); /* Soft inner well for focus */
+  padding: 1.5rem;
+  border-radius: var(--radius-sm);
+  width: 100%;
 }
 
 .timer {
-  font-size: 2.2rem;
-  /* Larger, sleeker timer */
+  font-size: 2.6rem;
+  /* Larger, more prominent timer */
   font-weight: 200;
-  letter-spacing: -1px;
+  letter-spacing: -1.5px;
   font-variant-numeric: tabular-nums;
   color: var(--text-main);
 }
@@ -758,20 +823,22 @@ body {
 
 .record-buttons {
   display: flex;
-  gap: 1rem;
+  gap: 1.5rem;
+  justify-content: center;
+  width: 100%;
 }
 
 .record-action-btn {
-  width: 50px;
-  height: 50px;
-  min-width: 50px; /* Force minimum width */
+  width: 54px;
+  height: 54px;
+  min-width: 54px; /* Force minimum width */
   border-radius: 50%;
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   box-shadow: var(--shadow);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -986,6 +1053,20 @@ input:checked+.slider:before {
   justify-content: space-between;
 }
 
+.btn {
+  padding: 0.8rem 1.6rem;
+  border-radius: var(--radius); /* Unified with sidebar's rounded feel */
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  border: none;
+  font-size: 1rem;
+}
+
 .btn-icon {
   width: 56px;
   height: 56px;
@@ -1029,19 +1110,18 @@ input:checked+.slider:before {
   outline: none;
 }
 
-/* Workspace */
+/* Workspace Container */
 .workspace {
   flex: 1;
   background: transparent;
-  /* Rely on .app-container background */
   position: relative;
   overflow: auto;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  /* Removed top padding to align perfectly with app-main */
-  /* Reduced gap from 280px sidebar, expanded view */
-  padding: 0 2rem 3rem calc(280px + 3rem);
+  align-items: center; /* Center horizontally */
+  justify-content: flex-start !important; /* Always start from top to match sidebar */
+  padding: 0 1rem;
+  min-width: 0;
 }
 
 .pdf-wrapper {
@@ -1088,34 +1168,25 @@ input:checked+.slider:before {
   display: none !important;
 }
 
-/* Workspace */
-.workspace {
-  flex: 1;
-  background: transparent;
-  position: relative;
-  overflow: auto;
-  display: block;
-  text-align: center;
-  /* Sidebar is 280px + gaps. Physical margin ensures content starts AFTER sidebar */
-  margin-left: calc(280px + 3rem); 
-  padding: 2rem 2rem 3rem 0;
-  min-height: calc(100vh - 80px); 
-}
+/* Second workspace definition removed to prevent conflict */
 
 .pdf-wrapper.empty {
   display: flex !important;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  max-width: 1000px;
-  flex: 1; /* Fill the workspace height */
-  min-height: 600px;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(8px);
-  border-radius: var(--radius);
+  width: min(1500px, 95%); /* Significantly increased width for a spacious feel */
+  flex: none;
+  min-height: 860px;
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 10px 15px -3px rgba(0, 0, 0, 0.08),
+    0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  margin: 0 auto; /* Keep horizontal centering */
   transition: all 0.3s ease;
-  border: 2px dashed var(--border);
 }
 
 .pdf-wrapper.empty:hover {
@@ -1145,11 +1216,28 @@ input:checked+.slider:before {
 }
 
 .empty-state p {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #333;
-  margin-bottom: 2rem;
+  font-size: 1.8rem; /* Matched to previous direct style */
+  font-weight: 900;
+  color: #1d1d1f;
+  margin-bottom: 1.5rem;
   letter-spacing: -0.5px;
+}
+
+.empty-state-tip {
+  color: #3c3c43; /* Apple secondary label color */
+  font-size: 1.15rem;
+  line-height: 1.8;
+  font-weight: 500;
+  margin-bottom: 2rem;
+}
+
+.empty-state-sub-tip {
+  color: #3c3c4399; /* Apple tertiary label color */
+  font-size: 0.95rem;
+  line-height: 1.6;
+  font-weight: 500;
+  margin-bottom: 3.5rem;
+  text-align: center;
 }
 
 .empty-state-clickable {
@@ -1215,7 +1303,7 @@ input:checked+.slider:before {
   cursor: crosshair;
   z-index: 5;
   touch-action: none; /* Handle everything via script to prevent pen-scroll conflict */
-  transition: transform 0.1s ease-out; 
+  transition: transform 0.1s ease-out;
   transform-origin: top center;
 }
 
@@ -1236,6 +1324,8 @@ input:checked+.slider:before {
 .page-controls {
   position: fixed;
   bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
   background: var(--surface);
   padding: 0.5rem 1rem;
   border-radius: 20px;
@@ -1244,6 +1334,17 @@ input:checked+.slider:before {
   align-items: center;
   gap: 1rem;
   z-index: 100;
+}
+
+.record-controls {
+  background: rgba(0, 0, 0, 0.03); /* Subtle backdrop for grouping */
+  padding: 1.25rem;
+  border-radius: var(--radius);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Align left */
+  gap: 1.25rem;
 }
 
 /* Welcome Modal */
@@ -1368,141 +1469,24 @@ input:checked+.slider:before {
   cursor: pointer;
 }
 
-/* Mobile Responsiveness */
+/* Responsive Adjustments */
 @media (max-width: 1200px) {
-  .sidebar {
-    width: 260px;
-    left: 1rem;
-  }
-  .workspace {
-    margin-left: calc(260px + 2rem);
-    padding: 0 1rem 3rem 0;
-  }
-  .app-header {
-    padding: 1rem 2rem;
-  }
+  .sidebar { width: 250px; }
+  .workspace { margin-left: 0; }
 }
 
 @media (max-width: 768px) {
-  /* Slim Header */
-  .app-header {
-    height: 3.5rem;
-    padding: 0 1rem;
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    justify-content: space-between;
-    background: var(--surface);
-    box-shadow: 0 1px 10px rgba(0,0,0,0.05);
-  }
-  .custom-logo { height: 1.8rem !important; }
-  .logo h1 { font-size: 0.9rem !important; display: none; } /* Hide text on very small screens if needed */
-  .logo .beta-badge { display: none; }
+  .app-header { padding: 0.75rem 1rem; position: relative; top: 0; left: 0; transform: none; width: 100%; max-width: none; border-radius: 0; box-shadow: none; border-bottom: 1px solid var(--border); }
+  .logo h1 { font-size: 1.25rem !important; }
+  .logo .custom-logo { height: 2.2rem; }
   
-  .mode-switch { scale: 0.8; transform-origin: right center; gap: 0.5rem; }
-  .mode-btn { padding: 0.3rem 0.6rem; font-size: 0.7rem; }
-
-  .app-main { padding-top: 0; flex-direction: column; }
-
-  /* Mobile Sidebar as a Bottom Drawer */
-  .sidebar {
-    position: fixed;
-    bottom: -100%; /* Hidden by default */
-    top: auto;
-    left: 0;
-    width: 100%;
-    height: auto;
-    max-height: 60vh;
-    border-radius: 24px 24px 0 0;
-    flex-direction: column;
-    overflow-y: auto !important;
-    padding: 1.5rem 1rem 3rem 1rem;
-    z-index: 2000;
-    transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    background: var(--surface);
-    box-shadow: 0 -10px 40px rgba(0,0,0,0.2);
-    border: 1px solid var(--border);
-  }
-
-  .sidebar.show-mobile {
-    bottom: 0;
-  }
-
-  .tool-section {
-    min-width: 0;
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px dashed var(--border);
-    padding: 1.25rem 0;
-  }
-  .tool-section:last-child { border-bottom: none; }
-  .tool-section h3 { font-size: 0.9rem; margin-bottom: 1rem; }
-
-  .workspace {
-    margin: 0;
-    padding: 4.5rem 0.5rem 6.5rem 0.5rem !important;
-    height: 100vh;
-    overflow: auto;
-    background: #f8f8fb;
-  }
-
-  /* Floating Menu Toggle Button */
-  #mobile-tool-toggle {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    z-index: 1005;
-    padding: 0.9rem 1.5rem;
-    border-radius: 50px;
-    box-shadow: 0 8px 30px rgba(94, 92, 230, 0.4);
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.9rem;
-    border: none;
-    background: var(--primary);
-    color: white;
-  }
-
-  /* Compact Controls Move to Top */
-  .page-controls {
-    position: fixed;
-    top: 4rem;
-    left: 50%;
-    bottom: auto;
-    transform: translateX(-50%);
-    z-index: 999;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-    padding: 0.4rem 1rem;
-    border-radius: 30px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-    border: 1px solid var(--border);
-    width: auto;
-    min-width: 120px;
-    justify-content: center;
-  }
-
-  .floating-zoom-controls {
-    position: fixed;
-    top: 4rem;
-    right: 0.5rem;
-    bottom: auto;
-    scale: 0.75;
-    transform-origin: top right;
-    z-index: 998;
-    padding: 0.4rem 0.8rem;
-    background: rgba(255, 255, 255, 0.9);
-  }
+  .app-main { padding-top: 1rem; flex-direction: column; overflow-y: auto; }
+  .sidebar { position: relative; width: 100%; top: 0 !important; left: 0; margin-bottom: 2rem; height: auto; min-height: auto; box-shadow: none; border-radius: 0; border: none; border-bottom: 1px solid var(--border); }
+  .workspace { margin-left: 0; padding: 1rem !important; min-height: auto; display: flex; flex-direction: column; }
+  .pdf-wrapper.empty { width: 100%; min-height: 50vh; margin: 0; flex: 1; }
   
-  .floating-zoom-controls input[type="range"] {
-    display: none; /* Keep it button only for space */
-  }
-
-  /* Hide badge on mobile to clean up all clutter */
-  .built-by-badge {
-    display: none !important;
-  }
+  .page-controls { bottom: 1.5rem; transform: translateX(-50%) scale(0.9); position: fixed; }
+  .floating-zoom-controls { bottom: 6.5rem; right: 1rem; scale: 0.8; position: fixed; }
+  .built-by-badge { display: none; }
 }
 

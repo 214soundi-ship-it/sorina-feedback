@@ -107,28 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupLearnerResetAction(); // Add learner reset listener
   setupZoomControls(); // Initialize zoom listeners
   
-  // Mobile UI: Tool drawer toggle
-  const mobileToggle = document.getElementById('mobile-tool-toggle');
-  const profSidebar = document.getElementById('professor-sidebar');
-  const learnSidebar = document.getElementById('learner-sidebar');
-  
-  if (mobileToggle) {
-    mobileToggle.addEventListener('click', () => {
-      const activeSidebar = currentMode === 'professor' ? profSidebar : learnSidebar;
-      activeSidebar.classList.toggle('show-mobile');
-      
-      const isOpen = activeSidebar.classList.contains('show-mobile');
-      mobileToggle.innerHTML = isOpen ? 
-        '<i class="fa-solid fa-xmark"></i> 닫기' : 
-        '<i class="fa-solid fa-wrench"></i> 도구함';
-      
-      if (isOpen) {
-        mobileToggle.style.backgroundColor = '#ff3b30'; // red when open
-      } else {
-        mobileToggle.style.backgroundColor = ''; // default primary
-      }
-    });
-  }
+
   
   // Initialize Lucide Icons
   if (typeof lucide !== 'undefined') {
@@ -298,14 +277,7 @@ function setupModeSwitch() {
 }
 
 function setupResetAction() {
-  const newFeedbackBtn = document.getElementById('new-feedback-btn');
-  if (newFeedbackBtn) {
-    newFeedbackBtn.addEventListener('click', () => {
-      if (confirm('모든 기록(PDF, 필기, 음성)을 지우고 새로 시작하시겠습니까?')) {
-        resetAppState();
-      }
-    });
-  }
+  // Removed new-feedback-btn listener as functionality is now integrated into PDF upload
   
   const previewBtn = document.getElementById('preview-mode-btn');
   if (previewBtn) {
@@ -499,7 +471,18 @@ function resetAppState(preserveMode = false) {
 
 document.getElementById('pdf-upload').addEventListener('change', (e) => {
   const file = e.target.files[0];
-  if (file && file.type === 'application/pdf') {
+  if (!file) return;
+
+  // Integration: If a document is already loaded, ask for reset confirmation
+  if (pdfDoc) {
+    if (!confirm('새로운 파일을 불러오면 현재 작성 중인 모든 피드백 내용(필기, 음성)이 지워집니다. 진행하시겠습니까?')) {
+      e.target.value = ''; // Reset input so the same file can be selected again
+      return;
+    }
+    resetAppState();
+  }
+
+  if (file.type === 'application/pdf') {
     // Store original filename without extension
     originalFileName = file.name.replace(/\.[^/.]+$/, "");
     
