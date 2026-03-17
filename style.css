@@ -1214,7 +1214,7 @@ input:checked+.slider:before {
   height: 100%;
   cursor: crosshair;
   z-index: 5;
-  touch-action: pan-x pan-y pinch-zoom; /* Allow panning and zooming, while JS handles drawing prevention for touch */
+  touch-action: none; /* Handle everything via script to prevent pen-scroll conflict */
   transition: transform 0.1s ease-out; 
   transform-origin: top center;
 }

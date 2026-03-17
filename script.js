@@ -81,6 +81,12 @@ let lastY = 0;
 let currentZoom = 1.0; // Document specific zoom level
 let tpInitialDist = 0; // Tracking for pinch zoom
 let tpInitialZoom = 1.0;
+let isPanning = false;
+let startPanX = 0;
+let startPanY = 0;
+let startScrollTop = 0;
+let startScrollLeft = 0;
+const workspace = document.querySelector('.workspace');
 
 // Missing State Variables (CRITICAL FIX)
 let isRecording = false;
@@ -99,6 +105,29 @@ document.addEventListener('DOMContentLoaded', () => {
   setupResetAction();
   setupLearnerResetAction(); // Add learner reset listener
   setupZoomControls(); // Initialize zoom listeners
+  
+  // Mobile UI: Tool drawer toggle
+  const mobileToggle = document.getElementById('mobile-tool-toggle');
+  const profSidebar = document.getElementById('professor-sidebar');
+  const learnSidebar = document.getElementById('learner-sidebar');
+  
+  if (mobileToggle) {
+    mobileToggle.addEventListener('click', () => {
+      const activeSidebar = currentMode === 'professor' ? profSidebar : learnSidebar;
+      activeSidebar.classList.toggle('show-mobile');
+      
+      const isOpen = activeSidebar.classList.contains('show-mobile');
+      mobileToggle.innerHTML = isOpen ? 
+        '<i class="fa-solid fa-xmark"></i> 닫기' : 
+        '<i class="fa-solid fa-wrench"></i> 도구함';
+      
+      if (isOpen) {
+        mobileToggle.style.backgroundColor = '#ff3b30'; // red when open
+      } else {
+        mobileToggle.style.backgroundColor = ''; // default primary
+      }
+    });
+  }
   
   // Initialize Lucide Icons
   if (typeof lucide !== 'undefined') {
@@ -740,13 +769,18 @@ function startDrawing(e) {
   if (isInputBlocked) return; 
   
   // UX FIX: Differentiate between Pen and Touch for professional iPad experience
-  // For Pen/Mouse: Stop browser from scrolling/panning immediately
-  if (e.pointerType !== 'touch') {
+  if (e.pointerType === 'touch') {
+    // Touch is for navigation/panning
+    isPanning = true;
+    startPanX = e.clientX;
+    startPanY = e.clientY;
+    startScrollTop = workspace.scrollTop;
+    startScrollLeft = workspace.scrollLeft;
+    return;
+  } else {
+    // Pen/Mouse: Stop browser from scrolling/panning immediately
     e.preventDefault(); 
     e.stopPropagation();
-  } else {
-    // Touch is for navigation/zooming, not for drawing in Professor mode
-    if (currentMode === 'professor') return;
   }
 
   if (currentMode === 'learner') {
@@ -785,6 +819,14 @@ function startDrawing(e) {
 }
 
 function draw(e) {
+  if (isPanning) {
+    const dx = e.clientX - startPanX;
+    const dy = e.clientY - startPanY;
+    workspace.scrollTop = startScrollTop - dy;
+    workspace.scrollLeft = startScrollLeft - dx;
+    return;
+  }
+
   if (!isDrawing || currentMode !== 'professor') return;
   e.preventDefault();
 
@@ -824,6 +866,7 @@ function draw(e) {
 }
 
 function stopDrawing() {
+  isPanning = false;
   if (!isDrawing || currentMode !== 'professor') return;
   isDrawing = false;
 
