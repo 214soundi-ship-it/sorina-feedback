@@ -56,6 +56,7 @@ let pauseStartTime = 0;
 const learnerAudio = document.getElementById('learner-audio');
 let recordedAudioBlob = null; // Store pure blob reference for export
 
+
 // Custom Audio Player Elements
 const playPauseBtn = document.getElementById('play-pause-btn');
 const audioProgress = document.getElementById('audio-progress');
@@ -778,7 +779,8 @@ function startDrawing(e) {
     tool: currentToolType,
     color: currentStyle.color,
     thickness: currentStyle.size,
-    points: [{ x: Math.round(x), y: Math.round(y) }]
+    points: [{ x: Math.round(x), y: Math.round(y) }],
+    transcript: "" // Will be filled by STT
   };
 }
 
@@ -1035,6 +1037,7 @@ async function setupAudio() {
 
     if (isRecording) {
       mediaRecorder.stop();
+      if (recognition) recognition.stop();
     }
 
     isRecording = false;
@@ -1130,6 +1133,7 @@ function startActualRecording() {
 
     startTime = Date.now();
     mediaRecorder.start();
+    
     isRecording = true;
     isMicArmed = false;
     isPaused = false;
@@ -1171,6 +1175,7 @@ function startActualRecording() {
     isMicArmed = true; // Stay armed to try again
   }
 }
+
 
 function updateTimer() {
   if (isPaused) return;
@@ -1627,7 +1632,9 @@ function playStrokeAudio(stroke) {
   // Highlights point without pausing the playback
   // Timeout removes highlight after a few seconds
   renderStrokes(stroke.id);
-  setTimeout(() => renderStrokes(), 2000);
+  setTimeout(() => {
+    renderStrokes();
+  }, 3000);
 
   // 2. 오디오 동기화 및 재생
   if (learnerAudio.src) {
@@ -1777,6 +1784,7 @@ function animationLoop() {
     } else {
       renderStrokes(); // Just render strokes natively
     }
+
   }
   requestAnimationFrame(animationLoop);
 }

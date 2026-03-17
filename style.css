@@ -1094,12 +1094,12 @@ input:checked+.slider:before {
   background: transparent;
   position: relative;
   overflow: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  /* Sidebar is 280px. Offset content so it's centered in the remaining space */
-  padding: 2rem 2rem 3rem calc(280px + 3rem);
-  min-height: calc(100vh - 80px); /* Account for header roughly */
+  display: block;
+  text-align: center;
+  /* Sidebar is 280px + gaps. Physical margin ensures content starts AFTER sidebar */
+  margin-left: calc(280px + 3rem); 
+  padding: 2rem 2rem 3rem 0;
+  min-height: calc(100vh - 80px); 
 }
 
 .pdf-wrapper.empty {
@@ -1214,9 +1214,14 @@ input:checked+.slider:before {
   height: 100%;
   cursor: crosshair;
   z-index: 5;
-  touch-action: pinch-zoom; /* ONLY pinch-zoom and pan handled by browser if we want, but actually 'none' is safest for pen */
+  touch-action: pan-x pan-y pinch-zoom; /* Allow panning and zooming, while JS handles drawing prevention for touch */
   transition: transform 0.1s ease-out; 
   transform-origin: top center;
+}
+
+#zoom-wrapper {
+  display: inline-block;
+  vertical-align: top;
 }
 
 /* Ensure pdf-container itself is the one being scaled */
@@ -1370,7 +1375,8 @@ input:checked+.slider:before {
     left: 1rem;
   }
   .workspace {
-    padding: 0 1rem 3rem calc(260px + 2rem);
+    margin-left: calc(260px + 2rem);
+    padding: 0 1rem 3rem 0;
   }
   .app-header {
     padding: 1rem 2rem;
@@ -1415,17 +1421,44 @@ input:checked+.slider:before {
     flex-direction: column;
   }
   .workspace {
+    margin-left: 0;
     margin-bottom: 40vh;
     padding: 0.5rem;
-    height: calc(100vh - 5rem - 40vh);
+    min-height: calc(100vh - 5rem - 40vh);
+    height: auto;
+    overflow: auto;
+  }
+  
+  /* Reposition page controls on mobile to top */
+  .page-controls {
+    top: 4.5rem;
+    bottom: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    width: fit-content;
+    z-index: 1001;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    padding: 0.4rem 0.8rem;
+    border: 1px solid var(--border);
+  }
+
+  /* Move badge or hide on small mobile */
+  .built-by-badge {
+    bottom: calc(40vh + 0.5rem);
+    right: auto;
+    left: 1rem;
+    font-size: 0.7rem;
+    padding: 6px 10px;
+    z-index: 1002;
   }
 }
 
 /* Floating Zoom Controls */
 .floating-zoom-controls {
   position: fixed;
-  right: 2rem;
-  bottom: 2rem;
+  right: 1.5rem;
+  bottom: 8.5rem; /* Moved up to avoid overlap with built-by-badge */
   background: var(--surface);
   padding: 0.6rem 1rem;
   border-radius: 30px;
@@ -1454,6 +1487,14 @@ input:checked+.slider:before {
 @media (max-width: 768px) {
   .floating-zoom-controls {
     right: 1rem;
-    bottom: calc(40vh + 1rem); /* Stay above mobile bottom sidebar */
+    bottom: calc(40vh + 3.5rem); /* Positioned above the sidebar/badge area */
+    padding: 0.4rem 0.7rem;
+    gap: 8px;
+    scale: 0.9;
+    transform-origin: right bottom;
   }
-}
+  .floating-zoom-controls input[type="range"] {
+    display: none; /* Hide slider on mobile to save space */
+  }
+}
+
