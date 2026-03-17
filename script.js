@@ -86,7 +86,8 @@ let startPanX = 0;
 let startPanY = 0;
 let startScrollTop = 0;
 let startScrollLeft = 0;
-const workspace = document.querySelector('.workspace');
+// workspace is already declared at top level (line 17)
+let isFingerDrawingEnabled = false;
 
 // Missing State Variables (CRITICAL FIX)
 let isRecording = false;
@@ -770,13 +771,20 @@ function startDrawing(e) {
   
   // UX FIX: Differentiate between Pen and Touch for professional iPad experience
   if (e.pointerType === 'touch') {
-    // Touch is for navigation/panning
-    isPanning = true;
-    startPanX = e.clientX;
-    startPanY = e.clientY;
-    startScrollTop = workspace.scrollTop;
-    startScrollLeft = workspace.scrollLeft;
-    return;
+    // If finger drawing is NOT enabled, touch is for navigation/panning
+    if (!isFingerDrawingEnabled) {
+      isPanning = true;
+      startPanX = e.clientX;
+      startPanY = e.clientY;
+      startScrollTop = workspace.scrollTop;
+      startScrollLeft = workspace.scrollLeft;
+      return;
+    }
+    // If enabled, fall through to drawing logic but only for 1 finger
+    if (e.touches && e.touches.length > 1) {
+      isPanning = true; // Still allow multi-touch zoom/pan if needed elsewhere or just block
+      return;
+    }
   } else {
     // Pen/Mouse: Stop browser from scrolling/panning immediately
     e.preventDefault(); 

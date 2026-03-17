@@ -1384,117 +1384,125 @@ input:checked+.slider:before {
 }
 
 @media (max-width: 768px) {
+  /* Slim Header */
   .app-header {
+    height: 3.5rem;
+    padding: 0 1rem;
     position: sticky;
     top: 0;
-    left: 0;
-    transform: none;
-    width: 100%;
-    max-width: none;
-    border-radius: 0;
-    padding: 0.75rem 1rem;
-    box-shadow: 0 1px 0 var(--border);
+    z-index: 1000;
+    justify-content: space-between;
+    background: var(--surface);
+    box-shadow: 0 1px 10px rgba(0,0,0,0.05);
   }
+  .custom-logo { height: 1.8rem !important; }
+  .logo h1 { font-size: 0.9rem !important; display: none; } /* Hide text on very small screens if needed */
+  .logo .beta-badge { display: none; }
+  
+  .mode-switch { scale: 0.8; transform-origin: right center; gap: 0.5rem; }
+  .mode-btn { padding: 0.3rem 0.6rem; font-size: 0.7rem; }
+
+  .app-main { padding-top: 0; flex-direction: column; }
+
+  /* Mobile Sidebar as a Bottom Drawer */
   .sidebar {
     position: fixed;
-    bottom: 0;
+    bottom: -100%; /* Hidden by default */
     top: auto;
     left: 0;
     width: 100%;
     height: auto;
-    max-height: 40vh;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    flex-direction: row;
-    overflow-x: auto;
-    padding: 1rem;
-    gap: 1rem;
-    box-shadow: 0 -8px 32px rgba(0,0,0,0.1);
-  }
-  .tool-section {
-    min-width: 200px;
-    padding: 0.5rem;
-    border-bottom: none;
-    border-right: 1px solid var(--border);
-  }
-  .app-main {
-    padding-top: 1rem;
+    max-height: 60vh;
+    border-radius: 24px 24px 0 0;
     flex-direction: column;
-  }
-  .workspace {
-    margin-left: 0;
-    margin-bottom: 40vh;
-    padding: 0.5rem;
-    min-height: calc(100vh - 5rem - 40vh);
-    height: auto;
-    overflow: auto;
-  }
-  
-  /* Reposition page controls on mobile to top */
-  .page-controls {
-    top: 4.5rem;
-    bottom: auto;
-    left: 50%;
-    transform: translateX(-50%);
-    width: fit-content;
-    z-index: 1001;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(8px);
-    padding: 0.4rem 0.8rem;
+    overflow-y: auto !important;
+    padding: 1.5rem 1rem 3rem 1rem;
+    z-index: 2000;
+    transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--surface);
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.2);
     border: 1px solid var(--border);
   }
 
-  /* Move badge or hide on small mobile */
-  .built-by-badge {
-    bottom: calc(40vh + 0.5rem);
-    right: auto;
-    left: 1rem;
-    font-size: 0.7rem;
-    padding: 6px 10px;
-    z-index: 1002;
+  .sidebar.show-mobile {
+    bottom: 0;
   }
-}
 
-/* Floating Zoom Controls */
-.floating-zoom-controls {
-  position: fixed;
-  right: 1.5rem;
-  bottom: 8.5rem; /* Moved up to avoid overlap with built-by-badge */
-  background: var(--surface);
-  padding: 0.6rem 1rem;
-  border-radius: 30px;
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  z-index: 1000;
-  border: 1px solid var(--border);
-  backdrop-filter: blur(10px);
-}
+  .tool-section {
+    min-width: 0;
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px dashed var(--border);
+    padding: 1.25rem 0;
+  }
+  .tool-section:last-child { border-bottom: none; }
+  .tool-section h3 { font-size: 0.9rem; margin-bottom: 1rem; }
 
-.floating-zoom-controls span {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--primary);
-  min-width: 45px;
-  text-align: center;
-}
+  .workspace {
+    margin: 0;
+    padding: 4.5rem 0.5rem 6.5rem 0.5rem !important;
+    height: 100vh;
+    overflow: auto;
+    background: #f8f8fb;
+  }
 
-.floating-zoom-controls input[type="range"] {
-  width: 100px;
-  cursor: pointer;
-}
-
-@media (max-width: 768px) {
-  .floating-zoom-controls {
-    right: 1rem;
-    bottom: calc(40vh + 3.5rem); /* Positioned above the sidebar/badge area */
-    padding: 0.4rem 0.7rem;
+  /* Floating Menu Toggle Button */
+  #mobile-tool-toggle {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 1005;
+    padding: 0.9rem 1.5rem;
+    border-radius: 50px;
+    box-shadow: 0 8px 30px rgba(94, 92, 230, 0.4);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
     gap: 8px;
-    scale: 0.9;
-    transform-origin: right bottom;
+    font-size: 0.9rem;
+    border: none;
+    background: var(--primary);
+    color: white;
   }
+
+  /* Compact Controls Move to Top */
+  .page-controls {
+    position: fixed;
+    top: 4rem;
+    left: 50%;
+    bottom: auto;
+    transform: translateX(-50%);
+    z-index: 999;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    padding: 0.4rem 1rem;
+    border-radius: 30px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    border: 1px solid var(--border);
+    width: auto;
+    min-width: 120px;
+    justify-content: center;
+  }
+
+  .floating-zoom-controls {
+    position: fixed;
+    top: 4rem;
+    right: 0.5rem;
+    bottom: auto;
+    scale: 0.75;
+    transform-origin: top right;
+    z-index: 998;
+    padding: 0.4rem 0.8rem;
+    background: rgba(255, 255, 255, 0.9);
+  }
+  
   .floating-zoom-controls input[type="range"] {
-    display: none; /* Hide slider on mobile to save space */
+    display: none; /* Keep it button only for space */
+  }
+
+  /* Hide badge on mobile to clean up all clutter */
+  .built-by-badge {
+    display: none !important;
   }
 }
 
