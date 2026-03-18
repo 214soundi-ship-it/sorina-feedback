@@ -23,10 +23,9 @@
   --radius: 20px;
   --radius-lg: 32px;
   /* Soft primary tint */
-  --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   --glass: blur(25px) saturate(180%);
-  /* Shared alignment line for all main content - ensuring sidebar and workarea start EXACTLY together */
-  --layout-top: 10rem; /* Significantly increased to accommodate the prominent header */
+  --sidebar-width: 380px;
 }
 
 * {
@@ -40,7 +39,11 @@ body {
   background: radial-gradient(circle at 50% -20%, #ffffff 0%, #f2f2f7 100%);
   color: var(--text-main);
   height: 100vh;
-  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Main window should not scroll */
+  -webkit-user-select: none;
+  user-select: none; /* Globally prevent selection to help tablets */
 }
 
 /* Custom Scrollbar */
@@ -304,14 +307,14 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), #7573e6);
+  background: linear-gradient(135deg, #5e5ce6, #4b49b8);
   color: white;
-  box-shadow: 0 4px 14px rgba(94, 92, 230, 0.3);
+  box-shadow: 0 8px 20px rgba(94, 92, 230, 0.25);
 }
 
 .btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(94, 92, 230, 0.4);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 12px 28px rgba(94, 92, 230, 0.35);
 }
 
 .btn-secondary {
@@ -491,47 +494,49 @@ body {
 }
 
 .sidebar {
-  position: relative; /* Remove absolute to participate in flex stretch */
-  width: 340px;
+  position: relative;
+  width: var(--sidebar-width);
   flex-shrink: 0;
-  /* Thinner sidebar */
-  background: var(--surface);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(35px) saturate(200%);
+  -webkit-backdrop-filter: blur(35px) saturate(200%);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   display: flex;
   flex-direction: column;
-  padding: 1rem;
-  gap: 0.5rem;
+  padding: 1.5rem;
+  gap: 1.5rem;
   overflow-y: auto;
-  box-shadow: var(--shadow);
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.05),
+    0 5px 15px rgba(0, 0, 0, 0.02);
   z-index: 50;
-  /* Float above workspace */
-  animation: slide-right 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s backwards;
+  animation: slide-right 1s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards;
 }
 
 @keyframes slide-right {
-  from { transform: translateX(-30px); opacity: 0; }
+  from { transform: translateX(-40px); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
 
 .tool-section {
-  padding: 1rem;
-  margin-bottom: 0.8rem;
-  border-radius: var(--radius); /* More consistent with design system */
-  border: 1px solid transparent;
+  padding: 1.25rem;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.015);
   transition: var(--transition);
   display: flex;
   flex-direction: column;
-  align-items: flex-start; /* Ensure left alignment */
+  align-items: flex-start;
   text-align: left;
 }
 
 .tool-section:hover:not(.disabled) {
-  background: var(--surface);
-  border-color: var(--border);
-  box-shadow: var(--shadow-sm);
+  background: rgba(255, 255, 255, 0.8);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.03);
+  border-color: rgba(94, 92, 230, 0.1);
 }
 
 .tool-section:last-child {
@@ -1115,13 +1120,20 @@ input:checked+.slider:before {
   flex: 1;
   background: transparent;
   position: relative;
-  overflow: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center; /* Center horizontally */
-  justify-content: flex-start !important; /* Always start from top to match sidebar */
-  padding: 0 1rem;
+  /* Ensure scrolling works when zoomed */
+  overflow: auto !important; 
+  display: block; /* Change from flex to block to avoid centering clipping during overflow */
+  text-align: center; /* Use text-align for horizontal centering of inline-block content */
+  padding: 1rem;
   min-width: 0;
+  /* Prevent tablet selection issues */
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  touch-action: none !important; /* Handle everything via script to prevent pen-scroll conflict */
 }
 
 .pdf-wrapper {
@@ -1304,20 +1316,29 @@ input:checked+.slider:before {
   z-index: 5;
   touch-action: none; /* Handle everything via script to prevent pen-scroll conflict */
   transition: transform 0.1s ease-out;
-  transform-origin: top center;
+  transform-origin: 0 0; /* Changed from top center to 0 0 for accurate scrolling */
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 #zoom-wrapper {
   display: inline-block;
   vertical-align: top;
+  margin: 0 auto; /* Centering when item fits */
+  text-align: left; /* Reset text-align inside */
 }
 
 /* Ensure pdf-container itself is the one being scaled */
 #pdf-container {
   position: relative;
   transition: transform 0.1s ease-out;
-  transform-origin: top center;
-  margin: 0 auto; /* Keep it centered as it grows */
+  transform-origin: 0 0; /* Changed from top center to 0 0 for accurate scrolling */
+  margin: 0; /* margin handled by zoom-wrapper */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Page Controls */

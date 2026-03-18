@@ -45,14 +45,11 @@
       <!-- 교수자 모드 툴바 -->
       <aside id="professor-sidebar" class="sidebar">
         <div class="tool-section">
-          <h3><i class="fa-regular fa-file-pdf"></i> 문서 설정</h3>
+          <h3><i class="fa-regular fa-file-pdf"></i> 과제 업로드</h3>
           <label for="pdf-upload" class="btn btn-primary btn-full upload-btn">
-            <i class="fa-solid fa-file-arrow-up"></i> 과제 불러오기
+            <i class="fa-solid fa-file-arrow-up"></i> PDF 불러오기
           </label>
           <input type="file" id="pdf-upload" accept="application/pdf" hidden>
-          <p style="font-size: 0.85rem; color: #8e8e93; margin-top: 0.75rem; line-height: 1.4;">
-            PDF 과제를 업로드하면<br>피드백을 시작할 수 있습니다.
-          </p>
         </div>
 
         <div class="tool-section record-section disabled" id="prof-record-tools">
@@ -125,20 +122,12 @@
       <!-- 학습자 모드 툴바 -->
       <aside id="learner-sidebar" class="sidebar hidden">
         <div class="tool-section">
-          <h3><i class="fa-regular fa-folder-open"></i> 피드백 불러오기</h3>
-          <p class="help-text" style="margin-bottom: 1rem;">화면 우측에서 링크를 입력하거나, 준비된 파일을 직접 선택해 주세요.</p>
-
-          <div style="border-top: 1px dashed var(--border); padding-top: 1rem; margin-top: 0.5rem;">
-            <label for="package-upload" class="btn btn-outline btn-full"
-              style="font-size: 0.85rem; padding: 0.5rem;">
-              <i class="fa-solid fa-box-open"></i> 피드백 파일 열기
+          <h3><i class="fa-regular fa-folder-open"></i> 피드백 열기</h3>
+          <div style="width: 100%;">
+            <label for="package-upload" class="btn btn-outline btn-full" style="font-size: 0.85rem;">
+              <i class="fa-solid fa-box-open"></i> 피드백 파일(.ZIP) 선택
             </label>
             <input type="file" id="package-upload" accept=".zip,.tfeed" hidden>
-          </div>
-
-          <div class="multi-file-inputs" style="display: none;">
-            <!-- Keep for layout consistency if needed, but hidden -->
-            <button id="load-feedback-btn" class="btn btn-secondary btn-full mt-2" disabled>불러오기 완료</button>
           </div>
 
           <button id="learner-reset-btn" class="btn btn-secondary btn-full" style="margin-top: 1rem; font-size: 0.8rem; border-style: dashed;" title="화면을 초기화하고 새로운 피드백을 불러옵니다">

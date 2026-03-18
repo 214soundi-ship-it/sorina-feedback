@@ -256,6 +256,11 @@ function setupModeSwitch() {
     
     // Isolation Control: 
     if (!isLearnerContentLoaded) {
+      // If we are recording, stop it and save before moving to learner empty state
+      if (isRecording || isMicArmed) {
+        stopRecordingSession();
+      }
+      
       document.getElementById('learn-empty-action').classList.remove('hidden');
       document.getElementById('prof-empty-action').classList.add('hidden');
       pdfContainer.classList.add('empty'); // This will trigger .empty-state display via CSS
@@ -333,6 +338,13 @@ function setupZoomControls() {
       if (!isNaN(baseW) && !isNaN(baseH)) {
         zoomWrapper.style.width = (baseW * currentZoom) + 'px';
         zoomWrapper.style.height = (baseH * currentZoom) + 'px';
+
+        // Force layout recalculation for Centering when zooming out
+        if (currentZoom <= 1.0) {
+          zoomWrapper.style.margin = '0 auto';
+        } else {
+          zoomWrapper.style.margin = '0'; // Let overflow handle it
+        }
       }
     }
   }
@@ -412,8 +424,13 @@ function resetAppState(preserveMode = false) {
   // 2. Reset UI
   pdfContainer.classList.add('empty');
   pdfRenderCanvas.style.display = 'none';
-  drawingCanvas.style.display = 'none';
   pageControls.classList.add('hidden');
+
+  if (zoomWrapper) {
+    zoomWrapper.style.width = 'auto';
+    zoomWrapper.style.height = 'auto';
+    zoomWrapper.style.margin = '0 auto';
+  }
   
   // Hide Share Link Card
   const shareContainer = document.getElementById('share-link-container');
@@ -564,12 +581,17 @@ function renderPage(num) {
        // We can't call internal applyZoom easily here without exposing it, 
        // so we just repeat the logic or trigger it.
        // For now, let's just make sure zoomWrapper matches.
-       if (zoomWrapper) {
-         zoomWrapper.style.width = (viewport.width * currentZoom) + 'px';
-         zoomWrapper.style.height = (viewport.height * currentZoom) + 'px';
-         pdfContainer.style.transform = `scale(${currentZoom})`;
-       }
-    }
+          zoomWrapper.style.width = (viewport.width * currentZoom) + 'px';
+          zoomWrapper.style.height = (viewport.height * currentZoom) + 'px';
+          pdfContainer.style.transform = `scale(${currentZoom})`;
+          
+          // Force layout recalculation for Centering when zooming out
+          if (currentZoom <= 1.0) {
+            zoomWrapper.style.margin = '0 auto';
+          } else {
+            zoomWrapper.style.margin = '0'; // Let overflow handle it
+          }
+        }
 
     const renderContext = {
       canvasContext: pdfCtx,
@@ -670,16 +692,33 @@ function setupDrawingTools() {
   });
 
   // Pointer Events for Cross-platform support (Mouse, Touch, Pen)
-  // UX FIX: For iOS Safari, we use pointerdown but ensure it's treated as a valid gesture
   drawingCanvas.addEventListener('pointerdown', (e) => {
     // Optimization: Don't call unlock here if already unlocked
     if (!isAudioUnlocked) unlockAudio();
+    
+    // tablet optimization: prevent default to stop selection/scrolling
+    // but only if we are actually going to draw or pan
+    if (e.pointerType === 'pen' || (e.pointerType === 'touch' && !isPanning)) {
+       // Proceed to startDrawing
+    }
+    
     startDrawing(e);
   });
   drawingCanvas.addEventListener('pointermove', draw);
   drawingCanvas.addEventListener('pointerup', stopDrawing);
   drawingCanvas.addEventListener('pointercancel', stopDrawing);
-  drawingCanvas.addEventListener('pointerout', stopDrawing);
+  drawingCanvas.addEventListener('pointerout', (e) => {
+    // Only stop if it's a mouse/pen leaving the area. 
+    // Touch movements often trigger pointerout on some browsers.
+    if (e.pointerType !== 'touch') stopDrawing();
+  });
+  
+  // Prevent context menu (long press / right click) to avoid selection/copy UI
+  drawingCanvas.addEventListener('contextmenu', (e) => {
+    if (currentMode === 'professor') {
+      e.preventDefault();
+    }
+  });
 
   // Undo Feature
   const undoBtn = document.getElementById('undo-btn');
@@ -752,10 +791,19 @@ function getAudioCurrentTime() {
 function startDrawing(e) {
   if (isInputBlocked) return; 
   
-  // UX FIX: Differentiate between Pen and Touch for professional iPad experience
+  // UX FIX: Handle Pen vs Touch vs Mouse
+  // Strongly prevent default to stop text selection/scrolling on tablets
+  if (e.pointerType === 'pen' || e.pointerType === 'touch') {
+    if (e.cancelable) e.preventDefault();
+  }
+
   if (e.pointerType === 'touch') {
-    // If finger drawing is NOT enabled, touch is for navigation/panning
-    if (!isFingerDrawingEnabled) {
+    // Finger logic
+    if (isFingerDrawingEnabled) {
+      // Draw with finger
+      isPanning = false;
+    } else {
+      // Pan with finger
       isPanning = true;
       startPanX = e.clientX;
       startPanY = e.clientY;
@@ -763,15 +811,20 @@ function startDrawing(e) {
       startScrollLeft = workspace.scrollLeft;
       return;
     }
-    // If enabled, fall through to drawing logic but only for 1 finger
-    if (e.touches && e.touches.length > 1) {
-      isPanning = true; // Still allow multi-touch zoom/pan if needed elsewhere or just block
+  } else if (e.pointerType === 'pen') {
+    // Stylus: Always Draw
+    isPanning = false;
+  } else {
+    // Mouse: Drag to draw, but maybe allow panning with a key?
+    if (e.button === 1 || (e.button === 0 && e.altKey)) { // Middle click or Alt+Click to pan
+      isPanning = true;
+      startPanX = e.clientX;
+      startPanY = e.clientY;
+      startScrollTop = workspace.scrollTop;
+      startScrollLeft = workspace.scrollLeft;
       return;
     }
-  } else {
-    // Pen/Mouse: Stop browser from scrolling/panning immediately
-    e.preventDefault(); 
-    e.stopPropagation();
+    isPanning = false;
   }
 
   if (currentMode === 'learner') {
@@ -1067,42 +1120,7 @@ async function setupAudio() {
   });
 
   stopBtn.addEventListener('click', () => {
-    if (!isRecording && !isMicArmed) return;
-
-    if (isRecording) {
-      mediaRecorder.stop();
-      if (recognition) recognition.stop();
-    }
-
-    isRecording = false;
-    isMicArmed = false;
-    
-    // Hide floating finish button
-    const floatBtn = document.getElementById('floating-finish-btn');
-    if (floatBtn) floatBtn.classList.add('hidden');
-
-    recordBtn.classList.remove('recording');
-    recordBtn.classList.remove('armed');
-    recordBtn.innerHTML = '<i class="fa-solid fa-microphone"></i>';
-    recordBtn.style.color = '';
-    timerDisplay.classList.remove('recording');
-    stopBtn.disabled = true;
-    
-    // Reset pause button state
-    if (pauseBtn) {
-      pauseBtn.disabled = true;
-      pauseBtn.classList.remove('active');
-      pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-    }
-
-    clearInterval(timerInterval);
-    // Don't reset timerDisplay.textContent to '00:00' here!
-    // Keep the final time visible.
-
-    // UX FIX: Guide to next step
-    showToast("피드백 작성이 완료되었습니다! 이제 버튼을 눌러 공유해보세요.");
-    const exportBtn = document.getElementById('export-package-btn');
-    if (exportBtn) exportBtn.classList.add('pulse-hint');
+    stopRecordingSession();
   });
 
   pauseBtn.addEventListener('click', () => {
@@ -1126,6 +1144,79 @@ async function setupAudio() {
       showToast("녹화를 재개합니다.");
     }
   });
+}
+
+function stopRecordingSession() {
+  console.log("Stopping recording session... Current state:", isRecording ? "Recording" : "Not Recording");
+  
+  if (!isRecording && !isMicArmed) {
+    // Even if not recording, ensure UI is reset
+    const floatBtn = document.getElementById('floating-finish-btn');
+    if (floatBtn) floatBtn.classList.add('hidden');
+    return;
+  }
+
+  // Clear timer immediately to give instant visual feedback
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    try {
+      mediaRecorder.stop();
+      console.log("MediaRecorder stopped successfully");
+    } catch (err) {
+      console.warn("MediaRecorder stop error:", err);
+      // Forced fallback if stop() fails
+      try {
+        if (mediaRecorder.stream) {
+          mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        }
+      } catch(e) {}
+    }
+  }
+  
+  // Future-proofing: stop recognition if it's ever added
+  if (typeof recognition !== 'undefined' && recognition) {
+    try { recognition.stop(); } catch(e) {}
+  }
+
+  isRecording = false;
+  isMicArmed = false;
+  isPaused = false;
+  
+  // UI Cleanup
+  const floatBtn = document.getElementById('floating-finish-btn');
+  if (floatBtn) {
+    floatBtn.classList.add('hidden');
+  }
+
+  if (recordBtn) {
+    recordBtn.classList.remove('recording', 'armed');
+    recordBtn.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+    recordBtn.style.color = '';
+    recordBtn.disabled = false; // Ensure it's clickable again
+  }
+  
+  if (timerDisplay) {
+    timerDisplay.classList.remove('recording');
+  }
+  
+  if (stopBtn) stopBtn.disabled = true;
+  
+  if (pauseBtn) {
+    pauseBtn.disabled = true;
+    pauseBtn.classList.remove('active');
+    pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+  }
+
+  showToast("피드백 작성이 완료되었습니다! 이제 버튼을 눌러 공유해보세요.");
+  const exportBtn = document.getElementById('export-package-btn');
+  if (exportBtn) {
+    exportBtn.disabled = false;
+    exportBtn.classList.add('pulse-hint');
+  }
 }
 
 function startActualRecording() {
@@ -1198,9 +1289,17 @@ function startActualRecording() {
     const floatBtn = document.getElementById('floating-finish-btn');
     if (floatBtn) {
       floatBtn.classList.remove('hidden');
-      floatBtn.onclick = () => {
-        if (stopBtn) stopBtn.click();
-      };
+      
+      // Clean up previous listeners to prevent multiple calls
+      const newFloatBtn = floatBtn.cloneNode(true);
+      floatBtn.parentNode.replaceChild(newFloatBtn, floatBtn);
+      
+      newFloatBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log("Floating finish button clicked");
+        stopRecordingSession();
+      });
     }
   } catch (err) {
     console.error("Recording start failed:", err);
