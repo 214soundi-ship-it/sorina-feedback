@@ -56,6 +56,14 @@ let pauseStartTime = 0;
 const learnerAudio = document.getElementById('learner-audio');
 let recordedAudioBlob = null; // Store pure blob reference for export
 
+// Multi-segment recording: 교수자가 녹음을 멈췄다가(예: 1부 필기 후) 다시
+// 시작하면(2부 필기) 매번 새 MediaRecorder가 0초부터 다시 시작해서, 이전
+// 세그먼트의 오디오가 통째로 덮어써지고 필기 타임스탬프도 충돌하던 문제를
+// 막기 위한 누적 상태. 세그먼트가 끝날 때마다 decode해서 하나의 연속된
+// WAV로 이어붙이고, 다음 세그먼트의 시각은 이 누적 길이만큼 offset된다.
+let cumulativeRecordedSeconds = 0;
+let recordedAudioBuffers = []; // decoded AudioBuffer, in recording order
+
 
 // Custom Audio Player Elements
 const playPauseBtn = document.getElementById('play-pause-btn');
@@ -398,7 +406,9 @@ function resetAppState(preserveMode = false) {
   feedbackData.pages = 1;
   recordedAudioBlob = null;
   learnerAudioUrl = null;
-  
+  cumulativeRecordedSeconds = 0;
+  recordedAudioBuffers = [];
+
   // UX FIX: Robust mic cleanup
   if (mediaRecorder && mediaRecorder.state !== 'inactive') {
     try { mediaRecorder.stop(); } catch(e) {}
@@ -777,15 +787,76 @@ function performUndo() {
 function getAudioCurrentTime() {
   if (currentMode === 'professor') {
     if (isRecording) {
+      // + cumulativeRecordedSeconds: so a 2nd/3rd recording segment (after a
+      // previous stop) continues the same timeline instead of restarting at 0
+      // and colliding with the first segment's stroke timestamps.
       if (isPaused) {
-        return (pauseStartTime - startTime - totalPausedTime) / 1000;
+        return cumulativeRecordedSeconds + (pauseStartTime - startTime - totalPausedTime) / 1000;
       }
-      return (Date.now() - startTime - totalPausedTime) / 1000;
+      return cumulativeRecordedSeconds + (Date.now() - startTime - totalPausedTime) / 1000;
     }
-    return 0;
+    return cumulativeRecordedSeconds;
   } else {
     return learnerAudio.currentTime;
   }
+}
+
+// Stitches multiple recorded segments (each its own decoded AudioBuffer, in
+// recording order) into one continuous WAV Blob, so multi-part feedback
+// (record -> stop -> record again) plays back as a single audio track that
+// matches the cumulative stroke timeline from getAudioCurrentTime().
+async function combineAudioBuffersToWav(buffers) {
+  const sampleRate = buffers[0].sampleRate;
+  const numCh = Math.max(1, ...buffers.map(b => b.numberOfChannels));
+  const totalDuration = buffers.reduce((sum, b) => sum + b.duration, 0);
+  const totalFrames = Math.ceil(totalDuration * sampleRate) + sampleRate; // +1s safety pad
+  const offlineCtx = new OfflineAudioContext(numCh, totalFrames, sampleRate);
+
+  let cursor = 0; // seconds
+  buffers.forEach(buffer => {
+    const src = offlineCtx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(offlineCtx.destination);
+    src.start(cursor);
+    cursor += buffer.duration;
+  });
+
+  const rendered = await offlineCtx.startRendering();
+  return audioBufferToWavBlob(rendered);
+}
+
+function audioBufferToWavBlob(buffer) {
+  const numCh = buffer.numberOfChannels;
+  const length = buffer.length * numCh * 2 + 44;
+  const ab = new ArrayBuffer(length);
+  const view = new DataView(ab);
+  function writeString(offset, str) { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); }
+  let offset = 0;
+  writeString(offset, 'RIFF'); offset += 4;
+  view.setUint32(offset, length - 8, true); offset += 4;
+  writeString(offset, 'WAVE'); offset += 4;
+  writeString(offset, 'fmt '); offset += 4;
+  view.setUint32(offset, 16, true); offset += 4;
+  view.setUint16(offset, 1, true); offset += 2;
+  view.setUint16(offset, numCh, true); offset += 2;
+  view.setUint32(offset, buffer.sampleRate, true); offset += 4;
+  view.setUint32(offset, buffer.sampleRate * numCh * 2, true); offset += 4;
+  view.setUint16(offset, numCh * 2, true); offset += 2;
+  view.setUint16(offset, 16, true); offset += 2;
+  writeString(offset, 'data'); offset += 4;
+  view.setUint32(offset, buffer.length * numCh * 2, true); offset += 4;
+  const channelData = [];
+  for (let ch = 0; ch < numCh; ch++) channelData.push(buffer.getChannelData(ch));
+  let idx = offset;
+  for (let i = 0; i < buffer.length; i++) {
+    for (let ch = 0; ch < numCh; ch++) {
+      let sample = Math.max(-1, Math.min(1, channelData[ch][i]));
+      sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+      view.setInt16(idx, sample, true);
+      idx += 2;
+    }
+  }
+  return new Blob([ab], { type: 'audio/wav' });
 }
 
 function startDrawing(e) {
@@ -1243,15 +1314,45 @@ function startActualRecording() {
       audioChunks.push(e.data);
     };
 
-    mediaRecorder.onstop = () => {
+    mediaRecorder.onstop = async () => {
       const mimeType = mediaRecorder.mimeType || 'audio/webm';
-      const audioBlob = new Blob(audioChunks, { type: mimeType });
-      recordedAudioBlob = audioBlob; 
-      const audioUrl = URL.createObjectURL(audioBlob);
-      learnerAudioUrl = audioUrl; 
+      const segmentBlob = new Blob(audioChunks, { type: mimeType });
       audioChunks = [];
+
+      // This may be the 2nd, 3rd, ... recording segment in this feedback
+      // session (교수자가 1부 녹음 후 멈췄다가 2부를 다시 녹음하는 경우).
+      // Decode it and stitch it onto any previous segments into ONE
+      // continuous audio file, so stroke timestamps (which are on one
+      // cumulative timeline via getAudioCurrentTime) always land on the
+      // matching audio content during learner playback.
+      try {
+        const arrayBuffer = await segmentBlob.arrayBuffer();
+        const decodeCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const decoded = await decodeCtx.decodeAudioData(arrayBuffer);
+        decodeCtx.close();
+        recordedAudioBuffers.push(decoded);
+
+        // Always re-encode to WAV (even for a single segment) so duration
+        // metadata is reliable for the learner player -- this also fixes the
+        // Chromium "MediaRecorder blob reports duration=Infinity" quirk as a
+        // side effect, since a plain WAV always carries a real duration.
+        const combinedBlob = await combineAudioBuffersToWav(recordedAudioBuffers);
+
+        if (learnerAudioUrl) URL.revokeObjectURL(learnerAudioUrl);
+        recordedAudioBlob = combinedBlob;
+        learnerAudioUrl = URL.createObjectURL(combinedBlob);
+        cumulativeRecordedSeconds += decoded.duration;
+      } catch (err) {
+        console.error('오디오 세그먼트 병합 실패, 이번 녹음만 단독으로 사용합니다:', err);
+        if (learnerAudioUrl) URL.revokeObjectURL(learnerAudioUrl);
+        recordedAudioBlob = segmentBlob;
+        learnerAudioUrl = URL.createObjectURL(segmentBlob);
+        // Best-effort fallback offset so a 3rd segment doesn't collide with
+        // this one even though it couldn't be merged into one audio file.
+        cumulativeRecordedSeconds += (Date.now() - startTime - totalPausedTime) / 1000;
+      }
+
       exportPackageBtn.disabled = false;
-      
       // Pulse the ZIP download button
       if (downloadZipBtn) downloadZipBtn.classList.add('pulse-hint');
     };
