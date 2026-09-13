@@ -44,6 +44,11 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden; /* Main window should not scroll */
+  /* Korean has no spaces inside a word, so without this, a narrow button
+     (PDF 불러오기, 피드백 파일 다운로드 등) can break mid-word, leaving a
+     single orphan syllable ("불러오" / "기") on its own line. keep-all only
+     wraps at actual spaces, between words, never inside one. */
+  word-break: keep-all;
   -webkit-user-select: none;
   user-select: none; /* Globally prevent selection to help tablets */
 }
