@@ -2167,20 +2167,28 @@ downloadZipBtn.addEventListener('click', async () => {
 
     // 3. Add Audio if it exists
     if (typeof recordedAudioBlob !== 'undefined' && recordedAudioBlob) {
-      // Robust extension detection
+      // Robust extension detection. combineAudioBuffersToWav() (added for the
+      // multi-segment recording fix) always re-encodes to audio/wav now, so
+      // this must check for 'wav' too -- without it, a WAV blob fell through
+      // to the 'webm' default, mismatching the file's real bytes against its
+      // extension in the ZIP and breaking playback for anyone who re-opens it.
       let extension = 'webm';
-      if (recordedAudioBlob.type.includes('mp4')) extension = 'mp4';
+      if (recordedAudioBlob.type.includes('wav')) extension = 'wav';
+      else if (recordedAudioBlob.type.includes('mp4')) extension = 'mp4';
       else if (recordedAudioBlob.type.includes('aac')) extension = 'm4a';
       else if (recordedAudioBlob.type.includes('mpeg')) extension = 'mp3';
-      
+
       zip.file(`audio.${extension}`, recordedAudioBlob);
     } else if (learnerAudioUrl) {
       try {
         const response = await fetch(learnerAudioUrl);
         const audioBlobLocal = await response.blob();
-        let extension = audioBlobLocal.type.includes('mp4') ? 'mp4' : 'webm';
-        if (audioBlobLocal.type.includes('aac')) extension = 'm4a';
-        
+        let extension = 'webm';
+        if (audioBlobLocal.type.includes('wav')) extension = 'wav';
+        else if (audioBlobLocal.type.includes('mp4')) extension = 'mp4';
+        else if (audioBlobLocal.type.includes('aac')) extension = 'm4a';
+        else if (audioBlobLocal.type.includes('mpeg')) extension = 'mp3';
+
         zip.file(`audio.${extension}`, audioBlobLocal);
       } catch (e) {
         console.error("Audio fetch failed for ZIP", e);
