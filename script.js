@@ -590,8 +590,18 @@ function renderPage(num) {
 
     const viewport = page.getViewport({ scale: currentScale });
 
-    pdfRenderCanvas.height = viewport.height;
-    pdfRenderCanvas.width = viewport.width;
+    // 고해상도(레티나) 화면 대응: 실제 화면 픽셀 밀도(devicePixelRatio)를
+    // 반영하지 않으면 PDF를 화면 배율의 절반 이하 해상도로만 그리게 돼서
+    // 아이패드 등에서 텍스트/선이 흐릿하게 보임. 캔버스 내부 버퍼는
+    // devicePixelRatio 배로 더 크게 그리고, CSS 표시 크기는 원래 크기로
+    // 고정해서 브라우저가 다운샘플링하도록 한다 (PDF.js 공식 권장 방식).
+    // 필기 캔버스(drawingCanvas)는 좌표 로직이 이미 검증되어 있어 건드리지
+    // 않고, PDF 레이어에만 적용한다.
+    const outputScale = window.devicePixelRatio || 1;
+    pdfRenderCanvas.width = Math.floor(viewport.width * outputScale);
+    pdfRenderCanvas.height = Math.floor(viewport.height * outputScale);
+    pdfRenderCanvas.style.width = viewport.width + 'px';
+    pdfRenderCanvas.style.height = viewport.height + 'px';
     drawingCanvas.height = viewport.height;
     drawingCanvas.width = viewport.width;
 
@@ -618,7 +628,10 @@ function renderPage(num) {
 
     const renderContext = {
       canvasContext: pdfCtx,
-      viewport: viewport
+      viewport: viewport,
+      // 캔버스 내부 버퍼가 outputScale배 더 크므로, 그리기 좌표도 같은 비율로
+      // 확대해야 (버퍼 해상도로) 선명하게 그려진다.
+      transform: outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null,
     };
     const renderTask = page.render(renderContext);
 
