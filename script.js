@@ -251,6 +251,7 @@ function setupModeSwitch() {
     }
     
     drawingCanvas.style.pointerEvents = 'auto'; // Enable drawing
+    if (profDrawingTools) profDrawingTools.style.display = ''; // 학습자 모드에서 숨겼던 필기 툴바 복원
     renderStrokes(); // Re-render without hit detection highlights
   });
 
@@ -261,7 +262,10 @@ function setupModeSwitch() {
     modeProfBtn.classList.remove('active');
     learnSidebar.classList.remove('hidden');
     profSidebar.classList.add('hidden');
-    
+    // 교수자용 필기 툴바(펜/색상)는 학습자 모드에서 아무 기능이 없으니 완전히 숨김
+    // (전에는 흐리게 표시만 되고 안 사라져서, 학생이 자기도 그릴 수 있는 줄 헷갈릴 수 있었음)
+    if (profDrawingTools) profDrawingTools.style.display = 'none';
+
     // Isolation Control: 
     if (!isLearnerContentLoaded) {
       // If we are recording, stop it and save before moving to learner empty state
