@@ -40,7 +40,8 @@ let isLearnerContentLoaded = false; // Isolation flag for professional/learner w
 let feedbackData = {
   version: "1.0",
   strokes: [],
-  pages: 1 // For future multi-page support
+  pages: 1, // For future multi-page support
+  transcript: "" // AI(STT)로 정리된 음성 피드백 텍스트. 없으면 빈 문자열.
 };
 
 let currentStroke = null;
@@ -288,7 +289,8 @@ function setupModeSwitch() {
       drawingCanvas.style.display = 'block';
       pdfRenderCanvas.style.display = 'block';
       pageControls.classList.remove('hidden');
-      renderStrokes(); 
+      renderStrokes();
+      renderLearnerTranscript();
     }
   });
 }
@@ -408,6 +410,7 @@ function resetAppState(preserveMode = false) {
   pdfBytes = null;
   feedbackData.strokes = [];
   feedbackData.pages = 1;
+  feedbackData.transcript = "";
   recordedAudioBlob = null;
   learnerAudioUrl = null;
   cumulativeRecordedSeconds = 0;
@@ -434,6 +437,12 @@ function resetAppState(preserveMode = false) {
   if (learnerAudio) learnerAudio.src = '';
   pageNum = 1;
   isLearnerContentLoaded = false;
+
+  // Transcript UI reset
+  if (transcriptSection) transcriptSection.classList.add('hidden');
+  if (transcriptTextarea) { transcriptTextarea.value = ''; transcriptTextarea.classList.add('hidden'); }
+  if (transcriptStatus) { transcriptStatus.textContent = '녹음을 마치면 자동으로 텍스트를 정리해요.'; transcriptStatus.classList.remove('hidden'); }
+  if (learnerTranscriptSection) learnerTranscriptSection.classList.add('hidden');
 
   // 2. Reset UI
   pdfContainer.classList.add('empty');
@@ -861,6 +870,76 @@ function audioBufferToWavBlob(buffer) {
     }
   }
   return new Blob([ab], { type: 'audio/wav' });
+}
+
+// ==========================================
+// 4. AI 전사(STT) + 텍스트 정리
+// ==========================================
+// /api/transcribe (Vercel 서버리스 함수)로 오디오를 보내서 전사+정리된 텍스트를
+// 받아온다. 서버 쪽 OPENAI_API_KEY가 아직 설정되지 않았거나 네트워크 문제가
+// 있어도, 이 기능은 어디까지나 보조 기능이라 실패해도 음성/필기 핵심 기능에는
+// 전혀 영향을 주지 않는다 (조용히 실패하고 안내 문구만 남김).
+const transcriptSection = document.getElementById('transcript-section');
+const transcriptStatus = document.getElementById('transcript-status');
+const transcriptTextarea = document.getElementById('transcript-textarea');
+const learnerTranscriptSection = document.getElementById('learner-transcript-section');
+const learnerTranscriptText = document.getElementById('learner-transcript-text');
+
+if (transcriptTextarea) {
+  transcriptTextarea.addEventListener('input', () => {
+    feedbackData.transcript = transcriptTextarea.value;
+  });
+}
+
+async function transcribeFeedback(audioBlob) {
+  if (!audioBlob || currentMode !== 'professor') return;
+  if (transcriptSection) transcriptSection.classList.remove('hidden');
+  if (transcriptStatus) {
+    transcriptStatus.textContent = '텍스트로 정리하는 중이에요...';
+    transcriptStatus.classList.remove('hidden');
+  }
+  if (transcriptTextarea) transcriptTextarea.classList.add('hidden');
+
+  try {
+    const resp = await fetch('/api/transcribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'audio/wav' },
+      body: audioBlob,
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      throw new Error((data && data.error) || '전사 요청이 실패했습니다.');
+    }
+
+    feedbackData.transcript = data.cleaned || data.raw || '';
+
+    if (feedbackData.transcript) {
+      if (transcriptStatus) transcriptStatus.classList.add('hidden');
+      if (transcriptTextarea) {
+        transcriptTextarea.value = feedbackData.transcript;
+        transcriptTextarea.classList.remove('hidden');
+      }
+    } else if (transcriptStatus) {
+      transcriptStatus.textContent = '인식된 음성이 없어요.';
+    }
+  } catch (err) {
+    console.warn('전사 실패 (핵심 기능에는 영향 없음):', err);
+    if (transcriptStatus) {
+      transcriptStatus.textContent = '텍스트 정리를 사용할 수 없어요. (설정 필요 - 음성/필기 기능은 정상 작동합니다)';
+    }
+  }
+}
+
+function renderLearnerTranscript() {
+  if (!learnerTranscriptSection || !learnerTranscriptText) return;
+  const text = feedbackData && feedbackData.transcript;
+  if (text) {
+    learnerTranscriptText.textContent = text;
+    learnerTranscriptSection.classList.remove('hidden');
+  } else {
+    learnerTranscriptSection.classList.add('hidden');
+  }
 }
 
 function startDrawing(e) {
@@ -1359,6 +1438,10 @@ function startActualRecording() {
       exportPackageBtn.disabled = false;
       // Pulse the ZIP download button
       if (downloadZipBtn) downloadZipBtn.classList.add('pulse-hint');
+
+      // 녹음이 (재)완성될 때마다 텍스트 정리를 다시 요청. 실패해도 오디오/필기
+      // 기능에는 영향 없음 - 실패하면 안내만 보여주고 조용히 넘어감.
+      transcribeFeedback(recordedAudioBlob);
     };
 
     startTime = Date.now();
@@ -1752,6 +1835,7 @@ function setupLearnerInputs() {
       isLearnerContentLoaded = true;
       setTimeout(() => {
         renderStrokes();
+        renderLearnerTranscript();
         alert('피드백 데이터를 성공적으로 불러왔습니다. 재생 버튼을 누르면 전체 설명을, 필기된 부분을 클릭하면 해당 부분의 설명을 들을 수 있습니다.');
       }, 500);
 

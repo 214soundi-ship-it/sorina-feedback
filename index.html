@@ -70,6 +70,13 @@
           </div>
         </div>
 
+        <div class="tool-section hidden" id="transcript-section">
+          <h3><i class="fa-solid fa-closed-captioning"></i> 전사된 텍스트</h3>
+          <p class="help-text" id="transcript-status">녹음을 마치면 자동으로 텍스트를 정리해요.</p>
+          <textarea id="transcript-textarea" class="transcript-textarea hidden"
+            placeholder="정리된 텍스트가 여기에 표시됩니다. 필요하면 직접 수정하세요."></textarea>
+        </div>
+
           <div style="padding-top: 0.5rem;">
             <div style="display: flex; flex-direction: column; gap: 0.5rem;">
               <button id="export-package-btn" class="btn btn-primary btn-full" disabled
@@ -168,6 +175,11 @@
                 </div>
               </div>
             </div>
+          </div>
+
+          <div class="tool-section hidden" id="learner-transcript-section" style="margin-top: 1rem;">
+            <h3><i class="fa-solid fa-closed-captioning"></i> 피드백 텍스트</h3>
+            <p class="transcript-readonly" id="learner-transcript-text"></p>
           </div>
         </div>
       </aside>

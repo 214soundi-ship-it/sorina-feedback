@@ -580,6 +580,33 @@ body {
   margin-top: 0.5rem;
 }
 
+.transcript-textarea {
+  width: 100%;
+  min-height: 120px;
+  margin-top: 0.6rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.transcript-readonly {
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--text-main);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.9rem 1rem;
+  margin: 0.5rem 0 0;
+  white-space: pre-wrap;
+}
+
 /* Colors & Sizes */
 .tool-group {
   display: flex;
