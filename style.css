@@ -595,6 +595,23 @@ body {
   resize: vertical;
 }
 
+.audio-delivery-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.audio-delivery-toggle input {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex-shrink: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
 .transcript-readonly {
   font-size: 0.85rem;
   line-height: 1.7;

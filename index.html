@@ -77,6 +77,15 @@
             placeholder="정리된 텍스트가 여기에 표시됩니다. 필요하면 직접 수정하세요."></textarea>
         </div>
 
+        <div class="tool-section" id="audio-delivery-section">
+          <h3><i class="fa-solid fa-volume-high"></i> 학생에게 음성 전달</h3>
+          <label class="audio-delivery-toggle" for="include-audio-checkbox">
+            <input type="checkbox" id="include-audio-checkbox" checked>
+            <span>음성 파일 포함 (해제하면 텍스트·필기만 전달돼요)</span>
+          </label>
+          <p class="help-text">연구용으로 조건을 나눠 전달할 때 사용하세요. 녹음과 AI 텍스트 정리는 이 설정과 관계없이 항상 진행됩니다 — 전달 단계에서만 음성 포함 여부가 갈려요.</p>
+        </div>
+
           <div style="padding-top: 0.5rem;">
             <div style="display: flex; flex-direction: column; gap: 0.5rem;">
               <button id="export-package-btn" class="btn btn-primary btn-full" disabled

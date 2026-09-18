@@ -295,21 +295,30 @@ function setupModeSwitch() {
   });
 }
 
+// 연구용 조건 분리: 이 체크박스가 꺼져 있으면 녹음·AI 텍스트 정리는 평소대로
+// 진행되지만, 학생에게 "전달"하는 단계(ZIP/공유링크/미리보기)에서만 음성을
+// 빼고 필기+텍스트만 넘긴다. 조건1(텍스트만) vs 조건2(텍스트+음성) 비교를
+// 같은 도구, 같은 녹음 워크플로우로 만들어내기 위한 스위치.
+function shouldIncludeAudioForLearner() {
+  const checkbox = document.getElementById('include-audio-checkbox');
+  return !checkbox || checkbox.checked;
+}
+
 function setupResetAction() {
   // Removed new-feedback-btn listener as functionality is now integrated into PDF upload
-  
+
   const previewBtn = document.getElementById('preview-mode-btn');
   if (previewBtn) {
     previewBtn.addEventListener('click', () => {
       // Bridge current state to learner mode
-      if (recordedAudioBlob) {
+      if (recordedAudioBlob && shouldIncludeAudioForLearner()) {
         const audioUrl = URL.createObjectURL(recordedAudioBlob);
         learnerAudio.src = audioUrl;
         learnerAudioUrl = audioUrl;
         learnerAudio.load(); // Explicit load for iOS
         learnerPlayerTools.classList.remove('disabled');
       }
-      
+
       isLearnerContentLoaded = true; // Temporary flag for local session
       modeLearnBtn.click();
     });
@@ -1619,10 +1628,11 @@ exportPackageBtn.addEventListener('click', async () => {
     let base64Audio = null;
     let base64Pdf = null;
 
-    if (typeof recordedAudioBlob !== 'undefined' && recordedAudioBlob) {
+    // 연구용 조건 스위치가 꺼져 있으면 음성은 통째로 링크에 넣지 않음 — 텍스트만 전달
+    if (shouldIncludeAudioForLearner() && typeof recordedAudioBlob !== 'undefined' && recordedAudioBlob) {
       audioBlobInfo = recordedAudioBlob;
       base64Audio = await blobToBase64(audioBlobInfo); // prepare for fallback just in case
-    } else if (learnerAudioUrl) {
+    } else if (shouldIncludeAudioForLearner() && learnerAudioUrl) {
       // (Fallback for ZIP loaded states where we only have the learnerAudioUrl)
       try {
         const response = await fetch(learnerAudioUrl);
@@ -2165,8 +2175,8 @@ downloadZipBtn.addEventListener('click', async () => {
     const jsonStr = JSON.stringify(feedbackData);
     zip.file("feedback.json", jsonStr);
 
-    // 3. Add Audio if it exists
-    if (typeof recordedAudioBlob !== 'undefined' && recordedAudioBlob) {
+    // 3. Add Audio if it exists (연구용 조건 스위치가 꺼져 있으면 통째로 건너뜀 — 텍스트만 전달)
+    if (shouldIncludeAudioForLearner() && typeof recordedAudioBlob !== 'undefined' && recordedAudioBlob) {
       // Robust extension detection. combineAudioBuffersToWav() (added for the
       // multi-segment recording fix) always re-encodes to audio/wav now, so
       // this must check for 'wav' too -- without it, a WAV blob fell through
@@ -2179,7 +2189,7 @@ downloadZipBtn.addEventListener('click', async () => {
       else if (recordedAudioBlob.type.includes('mpeg')) extension = 'mp3';
 
       zip.file(`audio.${extension}`, recordedAudioBlob);
-    } else if (learnerAudioUrl) {
+    } else if (shouldIncludeAudioForLearner() && learnerAudioUrl) {
       try {
         const response = await fetch(learnerAudioUrl);
         const audioBlobLocal = await response.blob();
