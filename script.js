@@ -82,7 +82,7 @@ let isAudioUnlocked = false; // Flag for iOS Safari Audio Unlock
 let isDrawing = false;
 let currentToolType = 'pen'; // 'pen' | 'highlighter' | 'eraser'
 let currentStyle = {
-  color: '#1c1c1e',
+  color: '#FF3B30',
   size: 3
 };
 let lastX = 0;
