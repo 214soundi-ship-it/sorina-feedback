@@ -93,9 +93,11 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.1rem 2rem;
-  /* Was 2.2rem 3.5rem: header took up ~120px of height and read as an
-     oversized banner disconnected from the toolbar/sidebar below it. */
+  padding: 1.75rem 2.5rem;
+  /* Was 1.1rem 2rem, and 2.2rem 3.5rem before that: the smaller pass
+     made the whole bar read as too small/incidental next to the wide
+     empty space around it -- bumped back up, short of the original
+     oversized 3.5rem, so the logo reads as the app's identity again. */
   background: var(--surface);
   backdrop-filter: var(--glass);
   -webkit-backdrop-filter: var(--glass);
@@ -114,32 +116,32 @@ body {
 .logo {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.1rem;
   color: var(--primary);
 }
 
 .logo .custom-logo {
-  height: 3rem;
+  height: 4rem;
   object-fit: contain;
 }
 
 .logo h1 {
-  font-size: 1.9rem;
+  font-size: 2.6rem;
   font-weight: 800;
   color: var(--text-main);
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   letter-spacing: -0.5px;
 }
 
 .beta-badge {
-  font-size: 0.65rem;
+  font-size: 0.8rem;
   font-weight: 800;
   color: #fff;
   background-color: var(--danger);
-  padding: 3px 8px;
-  border-radius: 6px;
+  padding: 4px 10px;
+  border-radius: 7px;
   letter-spacing: 0.5px;
   position: relative;
   top: -2px;
@@ -178,7 +180,7 @@ body {
   display: flex;
   background: rgba(0, 0, 0, 0.04);
   border-radius: var(--radius-sm);
-  padding: 4px;
+  padding: 6px;
 }
 
 .header-right {
@@ -251,12 +253,12 @@ body {
 }
 
 .mode-btn {
-  padding: 0.5rem 1rem;
+  padding: 0.7rem 1.3rem;
   border: none;
   background: transparent;
   border-radius: calc(var(--radius-sm) - 2px);
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 1rem;
   cursor: pointer;
   color: var(--text-muted);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1583,9 +1585,9 @@ input:checked+.slider:before {
 }
 
 @media (max-width: 768px) {
-  .app-header { padding: 0.75rem 1rem; position: relative; top: 0; left: 0; transform: none; width: 100%; max-width: none; border-radius: 0; box-shadow: none; border-bottom: 1px solid var(--border); }
-  .logo h1 { font-size: 1.25rem !important; }
-  .logo .custom-logo { height: 2.2rem; }
+  .app-header { padding: 1rem 1.25rem; position: relative; top: 0; left: 0; transform: none; width: 100%; max-width: none; border-radius: 0; box-shadow: none; border-bottom: 1px solid var(--border); }
+  .logo h1 { font-size: 1.5rem !important; }
+  .logo .custom-logo { height: 2.6rem; }
   
   .app-main { padding-top: 1rem; flex-direction: column; overflow-y: auto; }
   .sidebar { position: relative; width: 100%; top: 0 !important; left: 0; margin-bottom: 2rem; height: auto; min-height: auto; box-shadow: none; border-radius: 0; border: none; border-bottom: 1px solid var(--border); }
