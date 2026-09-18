@@ -26,8 +26,10 @@
   --transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   --glass: blur(25px) saturate(180%);
   --sidebar-width: 380px;
-  --layout-top: 6.5rem;
-  /* Clears the floating .app-header so sidebar/workspace/toolbar don't render underneath it */
+  --layout-top: 9.5rem;
+  /* Clears the floating .app-header so sidebar/workspace/toolbar don't render underneath it.
+     Was 6.5rem, tuned for the smaller header before it was enlarged (§5-18/5-19) --
+     the bigger header (~132px tall) now needs more clearance or it overlaps the sidebar. */
 }
 
 * {
