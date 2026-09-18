@@ -693,12 +693,22 @@ body {
   margin: 0 0.25rem;
 }
 
+/* Flat, uniform circular tool buttons -- no default browser button chrome
+   (border/outset), one shape for pen/highlighter/eraser/undo, one accent
+   (--primary purple) for whichever tool is active. Was previously a mix of
+   default `border: 2px outset` (skeuomorphic bevel) plus a one-off rounded-
+   chip + permanent yellow tint on the highlighter button alone; both
+   removed for a single consistent look across the toolbar. */
 .drawing-toolbar .tool-btn {
   width: 42px;
   height: 42px;
   flex: none;
+  border: none;
   border-radius: 50%;
   font-size: 1.1rem;
+  background: rgba(0, 0, 0, 0.045);
+  color: var(--text-main);
+  box-shadow: none;
 }
 
 .drawing-toolbar .tool-btn.active {
@@ -708,30 +718,8 @@ body {
 }
 
 .drawing-toolbar .tool-btn:hover:not(.active) {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.08);
   color: var(--text-main);
-}
-
-/* Pen vs highlighter were both plain grey circles with a small icon and
-   were easy to mix up at a glance. Give the highlighter its own shape
-   (a rounded chip, not a circle) and a permanent marker-yellow tint so it
-   reads as "flat translucent marker" next to the pen's "round ink nib" --
-   independent of which tool is currently active. */
-.drawing-toolbar .tool-btn[data-tool="highlighter"] {
-  border-radius: 12px;
-  background: rgba(255, 204, 0, 0.22);
-  color: #8a6d00;
-}
-
-.drawing-toolbar .tool-btn[data-tool="highlighter"]:hover:not(.active) {
-  background: rgba(255, 204, 0, 0.36);
-  color: #8a6d00;
-}
-
-.drawing-toolbar .tool-btn[data-tool="highlighter"].active {
-  background: #FFCC00;
-  color: #4a3900;
-  box-shadow: 0 4px 10px rgba(255, 204, 0, 0.45);
 }
 
 .drawing-toolbar .color-btn.active {
